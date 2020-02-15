@@ -3,8 +3,8 @@ import logging
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
-#import queue
 import math
+import random
 
 import pygame
 import pygame_gui
@@ -19,10 +19,11 @@ MAP_DIRECTORY = "maps/"
 WINDOW_SIZE = 400
 GRID_SIZE = 400
 SIDEBAR_WIDTH = 200
+SIDEBAR_OFFSET = GRID_SIZE
 WINDOW_HEIGHT = GRID_SIZE
 WINDOW_WIDTH = GRID_SIZE + SIDEBAR_WIDTH
 
-class Cell():
+class Cell:
     def __init__(self, x, y, size, c_type=FLOOR):
         self.x = x
         self.y = y
@@ -51,9 +52,17 @@ def euclidean_heur(x1, y1, x2, y2):
     y = abs(y1 - y2)
     return math.sqrt(x*x + y*y)
 
+def test_heur(x1, y1, x2, y2):
+    x = abs(x1 - x2)
+    y = abs(y1 - y2)
+    mmin = min(x, y)
+    mmax = max(x, y)
+    d = mmax - mmin
+    return math.sqrt(mmin*mmin + mmin*mmin) + d
+
 class MGrid():
     def __init__(self):
-        self.cell_size = 5
+        self.cell_size = 10
         self.size = int(WINDOW_SIZE / self.cell_size)
         self.__cell_grid = [[Cell(x*self.cell_size, y*self.cell_size, self.cell_size, FLOOR) for x in range(0, self.size)] for y in range(0, self.size)]        
         self.set_cell_type(0, 0, START)
@@ -61,14 +70,20 @@ class MGrid():
         self.start_cell = self.get_cell(0, 0)
         self.start_cell.g = 0
         self.end_cell = self.get_cell(self.size-1, self.size-1)
-        self.start_cell.h = manhattan_heur(0,0, self.size-1, self.size-1)
+        self.start_cell.h = test_heur(0,0, self.size-1, self.size-1)
         self.start_cell.f = self.start_cell.h
+
+        # Pathfinder variables
         self.openset = set()
         self.openset.add(self.start_cell)
         self.closedset = set()
         self.solved = False
         self.current = self.start_cell
-        #self.path = []
+
+        # Maze generation variables
+        self.maze_todo = set()
+        self.maze_cells = set()
+        self.maze_current = None
 
     # Check if x and y are in grid bounds
     def in_bounds(self, x, y):
@@ -90,7 +105,7 @@ class MGrid():
         if cell not in self.closedset and cell.type != WALL:
             if neighbor_cell == None:
                 g = self.current.g + 1.0
-                h = euclidean_heur(x, y, end_x, end_y)
+                h = test_heur(x, y, end_x, end_y)
                 f = g + h
                 if g < cell.g:
                     cell.g = g
@@ -101,9 +116,9 @@ class MGrid():
                         self.openset.add(cell)
             else:
                 g = self.current.g + 1.4
-                h = euclidean_heur(x, y, end_x, end_y)
+                h = test_heur(x, y, end_x, end_y)
                 f = g + h
-                if f < neighbor_cell.f:
+                if g < cell.g:
                     cell.g = g
                     cell.h = h
                     cell.f = f
@@ -120,22 +135,35 @@ class MGrid():
                 logger.info("Found shortest path!")
                 solved = True
                 return
+            
+            # End cell indices
+            e_x, e_y = self.cell_index(self.end_cell.x, self.end_cell.y)
 
             # Get cell with lowest f value
             c_lowest = None
             f_lowest = 1000000
+            d_lowest = 1000000
             for cell in self.openset:
-                if cell.f < f_lowest:
+                temp_x, temp_y = self.cell_index(cell.x, cell.y)
+                if cell.f < f_lowest:  # Pick cell with lowest f cost
+                    d_lowest = test_heur(temp_x, temp_y, e_x, e_y)
                     c_lowest = cell
                     f_lowest = cell.f
-            
+                elif cell.f == f_lowest:  # If f cost are same, pick the one with lower distance to goal
+                    d = test_heur(temp_x, temp_y, e_x, e_y)
+                    if d < d_lowest:
+                        d_lowest = d
+                        f_lowest = cell.f
+                        c_lowest = cell
+            logger.info("Current Cell (%d %d), g %f, h %f, f %f", self.current.x, self.current.y, self.current.g, self.current.h, self.current.f)
+            logger.info("Lowest Cell (%d %d), g %f, h %f, f %f", c_lowest.x, c_lowest.y, c_lowest.g, c_lowest.h, c_lowest.f)
+            self.print_smth()
             self.current = c_lowest
             self.openset.remove(self.current)
             self.closedset.add(self.current)
 
             #neighbors = []
             c_x, c_y = self.cell_index(self.current.x, self.current.y)
-            e_x, e_y = self.cell_index(self.end_cell.x, self.end_cell.y)
             #diag_dir = [(1, 1), (-1, 1), (-1, -1), (1, -1)]
             for dir_x, dir_y in [(1,0), (0,1), (-1,0), (0,-1)]:
                 n_x, n_y = (c_x + dir_x, c_y + dir_y)
@@ -162,6 +190,42 @@ class MGrid():
                                 self.update_cell_heuristics(d_x2, n_y, e_x, e_y, cell)             
             logger.info("Processed a step of astar")
 
+    def get_neighbors(self, cell_x, cell_y):
+        res = []
+        for dir_x, dir_y in [(1,0), (0,1), (-1,0), (0,-1)]:
+            n_x = cell_x + dir_x
+            n_y = cell_y + dir_y
+            if n_x >= 0 and n_x < self.size and n_y >= 0 and n_y < self.size:
+                res.append(self.get_cell(n_x, n_y))
+        return res
+
+    def generate_maze_step(self):
+        logger.info("Generating one step of maze")
+        
+        if len(self.maze_todo) > 0:
+            #cell = self.maze_todo.pop()
+            cell = random.choice(list(self.maze_todo))
+            #cell.type = FLOOR
+            logger.info("Random Cell (%d, %d)", cell.x, cell.y)
+            c_x, c_y = self.cell_index(cell.x, cell.y)
+    
+            nbrs = self.get_neighbors(c_x, c_y)
+            wall_count = 0
+            for n in nbrs:
+                if n not in self.maze_todo and n.type == WALL:
+                    wall_count += 1
+            if wall_count == 3:
+                for n in nbrs:
+                    if n not in self.maze_todo:
+                        self.maze_todo.add(n)
+                cell.type = FLOOR
+            self.maze_todo.remove(cell)
+
+
+    def print_smth(self):
+        for c in self.openset:
+            logger.info("Cell (%d %d), g %f, h %f, f %f", c.x, c.y, c.g, c.h, c.f)
+
     # Build path from current cell
     def reconstruct_path(self):
         res = []
@@ -179,10 +243,7 @@ class MGrid():
                 c.h = 0
                 c.g = 100000
                 c.f = 0
-        c_x, c_y = self.cell_index(self.start_cell.x, self.start_cell.y)
-        e_x, e_y = self.cell_index(self.end_cell.x, self.end_cell.y)
-        self.current.h = euclidean_heur(c_x, c_y, e_x, e_y)
-        self.current.g = self.current.h
+                c.previous = None
 
     # Reset variables used in solve
     def reset_solve(self):
@@ -190,9 +251,32 @@ class MGrid():
         self.openset.add(self.start_cell)
         self.closedset = set()
         self.current = self.start_cell
-        self.current.previous = None
         self.reset_heuristics()
+        c_x, c_y = self.cell_index(self.start_cell.x, self.start_cell.y)
+        e_x, e_y = self.cell_index(self.end_cell.x, self.end_cell.y)
+        self.current.h = test_heur(c_x, c_y, e_x, e_y)
+        self.current.f = self.current.h
+        self.current.g = 0
         self.solved = False
+    
+    def reset_maze(self):
+        self.maze_todo = set()
+        # Pick starting cell by random
+        self.maze_cells = set()
+        self.set_cell_type_forall(WALL)
+        for j in range(1, self.size-1, 1):
+            for i in range(1, self.size-1, 1):
+                self.maze_cells.add(self.get_cell(i, j))
+        #cell = self.maze_cells.pop()
+        self.start_cell.type = START
+        self.end_cell.type = END
+        cell = random.choice(list(self.maze_cells))
+        cell.type = FLOOR
+        c_x, c_y = self.cell_index(cell.x, cell.y)
+        for c in self.get_neighbors(c_x, c_y):
+            self.maze_todo.add(c)
+        #self.maze_current = cell
+
 
     # Edit grid cells
     def edit(self):
@@ -247,7 +331,11 @@ class MGrid():
     
     def get_cell_type(self, x, y):
         return self.__cell_grid[y][x].type
-        
+
+    def set_cell_type_forall(self, c_type):
+        for c_row in self.__cell_grid:
+            for c in c_row:
+                c.type = c_type        
 
     # Saves grid as text file
     # Write size to first line
@@ -274,39 +362,61 @@ class MGrid():
                 for j, value in enumerate(line):
                     self.__cell_grid[i][j] = value # For now assume that all values are valid (written by save())'''
 
-
 def main():
-    
-    # Modes, 0 = Edit, 1 = Solve
+    pygame.init()
+    # Modes, 0 = Edit, 1 = Solve, 2 = Generate
     current_mode = 0
-    #window_size = 400
-    window = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
-    #cell_grid = Grid(WINDOW_SIZE)
-    clock = pygame.time.Clock()
     
-    test_grid = MGrid()
+    window = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
+    clock = pygame.time.Clock()
+
+    gui_manager = pygame_gui.UIManager((SIDEBAR_WIDTH, WINDOW_HEIGHT))
+    sidebar_container = pygame_gui.core.ui_container.UIContainer(pygame.Rect((SIDEBAR_OFFSET, 0), (SIDEBAR_WIDTH, WINDOW_HEIGHT)), gui_manager)
+    #mbutton = pygame_gui.elements.UIButton(relative_rect=pygame.Rect((50, 50), (100, 50)), text='Say Hello', manager=gui_manager, container=sidebar_container)
+    top_drop_down = pygame_gui.elements.UIDropDownMenu(["Pathfinder", "Mazegenerator"], "Pathfinder", pygame.Rect((10, 10), (SIDEBAR_WIDTH - 20, 50)), gui_manager, sidebar_container)
+    alg_drop_down = pygame_gui.elements.UIDropDownMenu(["Astar", "BFS", "DFS"], "Astar", pygame.Rect((10, 70), (SIDEBAR_WIDTH - 20, 40)), gui_manager, sidebar_container)
+    
+
+    test_grid = MGrid()  # Our Cell grid
     
     running = True
     while running:
         time_delta = clock.tick(60) / 1000.0
+
+        # Proces events
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
-        logger.info("Time delta: %f seconds", time_delta)
+            gui_manager.process_events(event)
 
+        logger.info("Time delta: %f seconds", time_delta)
+        
+        # Check some inputs
         keys = pygame.key.get_pressed()
         if keys[pygame.K_1]: current_mode = 0
-        elif keys[pygame.K_2]: current_mode = 1
+        elif keys[pygame.K_2]: 
+            test_grid.reset_solve()
+            current_mode = 1
+        elif keys[pygame.K_3]:
+            test_grid.reset_maze()
+            current_mode = 2
         elif keys[pygame.K_ESCAPE]: running = False
 
+        # Update
         if current_mode == 0:
             test_grid.edit()
         elif current_mode == 1:
             test_grid.solve_step()
+        elif current_mode == 2:
+            test_grid.generate_maze_step()
+        gui_manager.update(time_delta)
         
+        # Render
         window.fill((250, 100, 0))
         test_grid.show(window)
+        gui_manager.draw_ui(window)
         pygame.display.flip()
+    pygame.quit()
     #cell_grid.save(MAP_DIRECTORY + "my_test_grid.txt")
 
 main()
