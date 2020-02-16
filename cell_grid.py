@@ -1,0 +1,144 @@
+
+import logging
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
+
+import pygame
+
+WALL = 0
+FLOOR = 1
+START = 2
+END = 3
+
+class Cell:
+    def __init__(self, x, y, size, c_type=FLOOR):
+        self.x = x
+        self.y = y
+        self.size = size
+        self.type = c_type
+        self.f = 0
+        self.h = 0
+        self.g = 1000000
+        self.previous = None
+
+    # Draw cell
+    def show(self, window, c_color=None):
+        if c_color != None:
+            color = c_color
+        else:
+            color = (0, 0, 0) if self.type == WALL else (50, 200, 200) if self.type == FLOOR else (40, 150, 40) if self.type == START else (20, 250, 20) if self.type == END else (200, 50, 50)
+        pygame.draw.rect(window, color, pygame.Rect(self.x, self.y, self.size, self.size))
+
+class CellGrid:
+    def __init__(self, window_size):
+        self.cell_size = 10
+        self.size = int(window_size / self.cell_size)
+        self.__cell_grid = [[Cell(x*self.cell_size, y*self.cell_size, self.cell_size, FLOOR) for x in range(0, self.size)] for y in range(0, self.size)]
+        self.start_cell = self.get_cell(1, 1)
+        self.start_cell.type = START
+        self.end_cell = self.get_cell(self.size-2, self.size-2)
+        self.end_cell.type = END
+
+    def __iter__(self):
+        for j in range(0, self.size):
+            for i in range(0, self.size):
+                yield self.__cell_grid[j][i]
+
+    # Edit maze
+    # Returns boolean indicating if we updated anything
+    def edit(self):
+        logger.info("END CELL: %d %d", self.end_cell.x, self.end_cell.y)
+        m_x, m_y = pygame.mouse.get_pos()
+        c_x, c_y = self.cell_index(m_x, m_y)
+        res = False
+        if self.in_bounds(c_x, c_y):
+            #c_y = int(m_y/self.cell_size)
+            logger.info("self size: %d m_x: %f m_y: %f Cell Position: (%d, %d)", self.size, m_x, m_y, c_x, c_y)
+            keys_pressed = pygame.key.get_pressed()
+            mouse_pressed = pygame.mouse.get_pressed()
+            
+            if mouse_pressed[0]:
+                if keys_pressed[pygame.K_s]:
+                    s_x, s_y = self.cell_index(self.start_cell.x, self.start_cell.y)
+                    self.set_cell_type(s_x, s_y, FLOOR)
+                    self.start_cell = self.get_cell(c_x, c_y)
+                    self.set_cell_type(c_x, c_y, START)
+                elif keys_pressed[pygame.K_e]:
+                    e_x, e_y = self.cell_index(self.end_cell.x, self.end_cell.y)
+                    self.set_cell_type(e_x, e_y, FLOOR)
+                    self.end_cell = self.get_cell(c_x, c_y)
+                    self.set_cell_type(c_x, c_y, END)
+                else:
+                    self.set_cell_type(c_x, c_y, WALL)
+                res = True
+            elif mouse_pressed[2]:
+                self.set_cell_type(c_x, c_y, FLOOR)
+                res = True
+        return res
+
+    def show(self, window):
+        for cell_row in self.__cell_grid:
+            for cell in cell_row:
+                cell.show(window)
+
+
+    def in_bounds(self, x, y):
+        if x >= 0 and x < self.size and y >= 0 and y < self.size:
+            return True
+        else:
+            return False
+
+    def cell_index(self, m_x, m_y):
+        return (int(m_x / self.cell_size), int(m_y / self.cell_size))
+
+    def get_neighbors(self, cell_x, cell_y):
+        res = []
+        for dir_x, dir_y in [(1,0), (0,1), (-1,0), (0,-1)]:
+            n_x = cell_x + dir_x
+            n_y = cell_y + dir_y
+            if n_x >= 0 and n_x < self.size and n_y >= 0 and n_y < self.size:
+                res.append(self.get_cell(n_x, n_y))
+        return res
+
+    def set_cell(self, x, y, cell):
+        self.__cell_grid[y][x] = cell
+    
+    def get_cell(self, x, y):
+        return self.__cell_grid[y][x]
+
+    def set_cell_type(self, x, y, c_type):
+        self.__cell_grid[y][x].type = c_type
+    
+    def get_cell_type(self, x, y):
+        return self.__cell_grid[y][x].type
+
+    def set_cell_type_forall(self, c_type):
+        for c_row in self.__cell_grid:
+            for c in c_row:
+                c.type = c_type      
+
+
+    # Saves grid as text file
+    # Write size to first line
+    # Then write grid as 2d array
+    '''def save(self, file_name):
+        with open(file_name, "w") as f:
+            f.write("%d\n" % (self.size))
+            for row in self.__cell_grid:
+                row_str = ""
+                for cell in row:
+                    row_str += str(cell.type)
+                f.write(row_str + "\n")
+
+    # Reads grid from text file
+    # First read size
+    # Then initialize grid and read values
+   def load(self, file_name):
+        with open(file_name, "r") as f:
+            size = int(f.readline().strip())
+            self.__cell_grid = [None] * size
+            for i in range(0, size):
+                self.__cell_grid[i] = [None] * size
+                line = f.readline()
+                for j, value in enumerate(line):
+                    self.__cell_grid[i][j] = value # For now assume that all values are valid (written by save())'''
