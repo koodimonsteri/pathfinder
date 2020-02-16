@@ -6,15 +6,22 @@ logger = logging.getLogger("PathFinder")
 logging.basicConfig(level=logging.INFO)
 
 import math
+import heapq
 
 import pygame
+
+def new_cmp_lt(c1, c2):
+    return c1[0] < c2[0]
+
+#override the existing "cmp_lt" module function with your function
+heapq.cmp_lt = new_cmp_lt
 
 # Base abstract class for different path finding algorithms
 class PathFinder(ABC):
     def __init__(self):
         raise NotImplementedError
 
-    def solve_step(self, parameter_list):
+    def solve_step(self):
         raise NotImplementedError
 
     def reset(self):
@@ -168,16 +175,6 @@ class Astar(PathFinder):
         self.__current_cell.g = 0
         self.solved = False
 
-    # Reconstruct path from current cell
-    def __get_path(self):
-        res = []
-        cur = self.__current_cell
-        while cur.previous != None:
-            res.append(cur)
-            cur = cur.previous
-        res.append(cur)
-        return res
-
     # Draw openset, closedset and path
     def show(self, window):
         # First draw openset in light green
@@ -187,16 +184,83 @@ class Astar(PathFinder):
         for c in self.__closedset:
             c.show(window, (0, 100, 25))
         # And at last construct path and draw it in bright green
-        path = self.__get_path()
+        path = self.__grid.get_path(self.__current_cell)
         for c in path:
             c.show(window, (0, 250, 100))
 
+class Dijkstra(PathFinder):
+    def __init__(self, grid):
+        self.__grid = grid
+        self.__visited = set()
+        self.__unvisited = []
+        self.reset(grid)
+        self.__current_cell = self.__grid.start_cell
+        self.solved = False
+
+    def solve_step(self):
+        if len(self.__unvisited) > 0 and not self.solved:
+            if self.__current_cell == self.__grid.end_cell:
+                #self.__current_cell == cur_cell
+                self.solved = True
+                return
+            cer_g, cur_cell = heapq.heappop(self.__unvisited)
+            #logger.log("Solving dijkstra! Cell %d %d", cur_cell.x, cur_cell.y)
+            self.__visited.add(cur_cell)
+            c_x, c_y = self.__grid.cell_index(cur_cell.x, cur_cell.y)
+            e_x, e_y = self.__grid.cell_index(self.__grid.start_cell.y, self.__grid.end_cell.y)
+            if self.__grid.in_bounds(c_x, c_y):
+                nbrs = self.__grid.get_neighbors(c_x, c_y)
+                for nbr in nbrs:
+
+                    if nbr not in self.__visited and nbr.type != WALL:
+                        g = self.__current_cell.g + 1.0
+                        if g < nbr.g:
+                            nbr.g = g
+                            nbr.previous = cur_cell
+            #heapq.heappop(self.__unvisited)
+            self.__current_cell = cur_cell
+            self.__heapify_unvisited()
+    
+    # Function to just heapify unvisited cells
+    def __heapify_unvisited(self):
+        #cells = [(cell.g, cell) for c_g, cell in self.__unvisited if cell not in self.__visited]
+        self.__unvisited = [(cell.g, cell) for c_g, cell in self.__unvisited if cell not in self.__visited]
+        setattr(Cell, "__lt__", lambda self, other: self.g < other.g)
+        heapq.heapify(self.__unvisited)
+
+    def reset(self, grid):
+        self.__grid = grid
+        self.__unvisited = []
+        self.__visited = set()
+        temp = []
+        nonwalls = self.__grid.get_cells(WALL, False)
+        for c in nonwalls:
+            c.g = 100000
+            c.previous = None
+            if c.type == START:
+                c.g = 0
+            self.__unvisited.append((c.g, c))
+        logger.info("RESETTING DIJKSTRA, len nonwalls %d len temp %d", len(nonwalls), len(temp))
+        setattr(Cell, "__lt__", lambda self, other: self.g < other.g)
+        heapq.heapify(self.__unvisited)
+        
+
+    def show(self, window):
+        for c in self.__visited:
+            c.show(window, (0, 150, 40))
+        path = self.__grid.get_path(self.__current_cell)
+        for c in path:
+            c.show(window, (0, 200, 50))
+
+
+
+
 # Dummy class for Breadth First Search
 class BFS(PathFinder):
-    def __init__(self):
-        pass
+    def __init__(self, grid):
+        self.__grid = grid
 
-    def solve_step(self, parameter_list):
+    def solve_step(self):
         pass
 
     def reset(self):
@@ -207,10 +271,10 @@ class BFS(PathFinder):
 
 # Dummy class for Depth First Search
 class DFS(PathFinder):
-    def __init__(self):
-        pass
+    def __init__(self, grid):
+        self.__grid = grid
 
-    def solve_step(self, parameter_list):
+    def solve_step(self):
         pass
 
     def reset(self):

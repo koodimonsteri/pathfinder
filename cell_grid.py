@@ -93,6 +93,16 @@ class CellGrid:
     def cell_index(self, m_x, m_y):
         return (int(m_x / self.cell_size), int(m_y / self.cell_size))
 
+        # Helper function to reconstruct path from current cell
+    def get_path(self, current_cell):
+        res = []
+        cur = current_cell
+        while cur.previous != None:
+            res.append(cur)
+            cur = cur.previous
+        res.append(cur)
+        return res
+
     # Get adjacent neighbors
     def get_neighbors(self, cell_x, cell_y):
         res = []
@@ -101,6 +111,17 @@ class CellGrid:
             n_y = cell_y + dir_y
             if n_x >= 0 and n_x < self.size and n_y >= 0 and n_y < self.size:
                 res.append(self.get_cell(n_x, n_y))
+        return res
+
+    # Get all cells by type
+    # Optional not operator parameter
+    def get_cells(self, cell_type, not_op=True):
+        res = []
+        for cell in self:
+            if not_op and cell.type == cell_type:
+                res.append(cell)
+            elif cell.type != cell_type:
+                res.append(cell)
         return res
 
     # Set Cell

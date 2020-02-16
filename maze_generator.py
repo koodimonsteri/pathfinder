@@ -68,8 +68,8 @@ class PrimGenerator(MazeGenerator):
 
 # Dummy class for Divide and Conquer algorithm
 class DNQGenerator(MazeGenerator):
-    def __init__(self):
-        pass
+    def __init__(self, grid):
+        self.__grid = grid
 
     def show(self):
         pass

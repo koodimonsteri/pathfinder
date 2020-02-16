@@ -21,7 +21,7 @@ SAVE_TEXT_HEIGHT = 40
 SAVE_BUTTON_WIDTH = (SIDEBAR_WIDTH - (MARGIN * 4)) / 2
 
 modes = ["Editor", "Pathfinder", "Mazegenerator"]
-solve_algos = ["Astar", "BFS", "DFS"]
+solve_algos = ["Astar", "Dijkstra", "BFS", "DFS"]
 maze_algos = ["Prim's", "Kruskal", "Divide & Conquer"]
 
 # Editor window which contains essential information and save/load functionality
@@ -58,7 +58,9 @@ class SolverWindow(UIWindow):
         self.pf_alg_drop_down = UIDropDownMenu(solve_algos, solve_algos[0],
                                             pygame.Rect((MARGIN, CONTAINER_OFFSET), (SIDEBAR_WIDTH - 20, DROPDOWN_HEIGHT)),
                                             manager=manager, container=self.get_container())
-        
+    
+    
+
 # Generator window to swap between different maze algorithms
 class GeneratorWindow(UIWindow):
     def __init__(self, rect, manager):
@@ -88,7 +90,7 @@ class MyGui():
         elif newmode == 1:
             self.mode_text_box.html_text = modes[newmode]
             self.mode_text_box.rebuild()
-            self.current_side_bar = SolverWindow(self.side_rect, self.gui_manager)
+            self.current_side_bar = SolverWindow(self.side_rect, self.gui_manager)                
         elif newmode == 2:
             self.mode_text_box.html_text = modes[newmode]
             self.mode_text_box.rebuild()

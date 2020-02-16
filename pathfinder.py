@@ -37,8 +37,7 @@ class MyGame:
     def process_events(self, event):
         if event.type == pygame.QUIT:
                 self.running = False
-        self.my_gui.process_events(event)
-
+        
         if event.type == pygame.USEREVENT:
             # Check drop down changes
             if event.user_type == pygame_gui.UI_DROP_DOWN_MENU_CHANGED:
@@ -53,7 +52,11 @@ class MyGame:
                 # Generator drop_down -> reset generator and change mode
                 elif event.text == modes[MAZEGENERATOR]:
                     self.reset_mode(MAZEGENERATOR)
-                    
+
+                # Reset solver -> set solver to Astar and reset pathfinder mode
+                elif event.text in solve_algos:
+                    self.reset_solver(event.text)
+
             elif event.ui_element.text == "Clear":
                 # Set all cells to FLOOR
                 self.cell_grid.set_cell_type_forall(FLOOR)
@@ -66,6 +69,7 @@ class MyGame:
             elif event.ui_element.text == "Load":
                 # Load grid from file TODO load grid
                 logger.info("LOADING")
+        self.my_gui.process_events(event)
 
     def handle_input(self):
         keys = pygame.key.get_pressed()
@@ -89,7 +93,16 @@ class MyGame:
             self.maze_generator.generate_step()
         self.my_gui.update(time_delta)
 
+    def reset_solver(self, alg):
+        if alg == solve_algos[0]:
+            self.solver = Astar(self.cell_grid)
+            self.solver.reset(self.cell_grid)
+        elif alg == solve_algos[1]:
+            self.solver = Dijkstra(self.cell_grid)
+            self.solver.reset(self.cell_grid)
+
     # Reset solver/generator
+    # Optional algorithm parameter (str)
     def reset_mode(self, mode):
         if mode == EDITOR:
             # Set editor mode and update gui
@@ -98,8 +111,9 @@ class MyGame:
         elif mode == PATHFINDER:
             # Set pathfinder mode, reset solver and update gui
             self.current_mode = PATHFINDER
-            self.solver.reset(self.cell_grid)
+            self.reset_solver(solve_algos[0])
             self.my_gui.set_sidebar(PATHFINDER)
+    
         elif mode == MAZEGENERATOR:
             # Set mazegenerator mode, reset generator and update gui
             self.current_mode = MAZEGENERATOR
