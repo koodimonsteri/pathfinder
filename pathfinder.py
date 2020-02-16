@@ -16,7 +16,6 @@ MAP_DIRECTORY = "maps/"
 WINDOW_SIZE = 400
 GRID_SIZE = 400
 SIDEBAR_WIDTH = 200
-SIDEBAR_OFFSET = GRID_SIZE
 WINDOW_HEIGHT = GRID_SIZE
 WINDOW_WIDTH = GRID_SIZE + SIDEBAR_WIDTH
 
@@ -24,85 +23,131 @@ EDITOR = 0
 PATHFINDER = 1
 MAZEGENERATOR = 2
 
-def main():
-    pygame.init()
-    
-    current_mode = EDITOR
-    
-    window = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
-    clock = pygame.time.Clock()
-    
-    my_gui = MyGui(SIDEBAR_WIDTH, WINDOW_HEIGHT, GRID_SIZE)
-
-    # Init grid
-    cell_grid = CellGrid(GRID_SIZE)
-    # Init solver and generator
-    solver = Astar(cell_grid)
-    maze_generator = PrimGenerator(cell_grid)
-
-    running = True
-    while running:
-        time_delta = clock.tick(60) / 1000.0
-        oldmode = current_mode
-
-        # Process events
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False
-            if event.type == pygame.USEREVENT:
-                if event.user_type == pygame_gui.UI_DROP_DOWN_MENU_CHANGED:
-                    if event.text == modes[EDITOR]:
-                        current_mode = EDITOR
-                    elif event.text == modes[PATHFINDER]:
-                        solver.reset(cell_grid)
-                        current_mode = PATHFINDER
-                    elif event.text == modes[MAZEGENERATOR]:
-                        maze_generator.reset(cell_grid)
-                        current_mode = MAZEGENERATOR
-            my_gui.process_events(event)
-
-        logger.info("Time delta: %f seconds", time_delta)
+class MyGame:
+    def __init__(self):
+        pygame.init()
+        self.gui_manager = pygame_gui.UIManager((WINDOW_WIDTH, WINDOW_HEIGHT))
+        self.cell_grid = CellGrid(WINDOW_SIZE)
+        self.solver = Astar(self.cell_grid)
+        self.maze_generator = PrimGenerator(self.cell_grid)
+        self.my_gui = MyGui(self.gui_manager)
+        self.current_mode = EDITOR
+        self.running = False
         
-        # Check some inputs
+    def process_events(self, event):
+        if event.type == pygame.QUIT:
+                self.running = False
+        self.my_gui.process_events(event)
+
+        if event.type == pygame.USEREVENT:
+            # Check drop down changes
+            if event.user_type == pygame_gui.UI_DROP_DOWN_MENU_CHANGED:
+                # Editor drop_down -> change mode
+                if event.text == modes[EDITOR]:
+                    self.reset_mode(EDITOR)
+
+                # Solver drop_down -> reset solver and change mode
+                elif event.text == modes[PATHFINDER]:
+                    self.reset_mode(PATHFINDER)
+
+                # Generator drop_down -> reset generator and change mode
+                elif event.text == modes[MAZEGENERATOR]:
+                    self.reset_mode(MAZEGENERATOR)
+                    
+            elif event.ui_element.text == "Clear":
+                # Set all cells to FLOOR
+                self.cell_grid.set_cell_type_forall(FLOOR)
+                self.cell_grid.start_cell.type = START
+                self.cell_grid.end_cell.type = END
+            elif event.ui_element.text == "Save":
+                # Save grid to file, TODO save grid
+                logger.info("SAVING")
+
+            elif event.ui_element.text == "Load":
+                # Load grid from file TODO load grid
+                logger.info("LOADING")
+
+    def handle_input(self):
         keys = pygame.key.get_pressed()
         if keys[pygame.K_1]:
-            current_mode = EDITOR
+            self.reset_mode(EDITOR)
         elif keys[pygame.K_2]:
-            solver.reset(cell_grid)
-            current_mode = PATHFINDER
+            self.reset_mode(PATHFINDER)
         elif keys[pygame.K_3]:
-            maze_generator.reset(cell_grid)
-            current_mode = MAZEGENERATOR
-        elif keys[pygame.K_ESCAPE]: running = False
-        
-        if oldmode != current_mode:
-            my_gui.set_sidebar(oldmode, current_mode)
+            self.reset_mode(MAZEGENERATOR)
+        elif keys[pygame.K_ESCAPE]:
+            # If escaping set running to false
+            self.running = False
 
-        # Update
-        if current_mode == EDITOR:
-            # If we updated something in grid, reset solver
-            if cell_grid.edit():
-                solver.reset(cell_grid)
-        elif current_mode == PATHFINDER:
-            solver.solve_step()
-        elif current_mode == MAZEGENERATOR:
-            maze_generator.generate_step()
-            
-        my_gui.update(time_delta)
-        
-        # Render
-        window.fill((250, 100, 0))
-        
-        cell_grid.show(window)
-        if current_mode == 1:
-            solver.show(window)
-        elif current_mode == 2:
-            maze_generator.show(window)
+    # Update game based on mode
+    def update(self, time_delta):
+        if self.current_mode == EDITOR:
+            self.cell_grid.edit()
+        elif self.current_mode == PATHFINDER:
+            self.solver.solve_step()
+        elif self.current_mode == MAZEGENERATOR:
+            self.maze_generator.generate_step()
+        self.my_gui.update(time_delta)
 
-        my_gui.show(window)
+    # Reset solver/generator
+    def reset_mode(self, mode):
+        if mode == EDITOR:
+            # Set editor mode and update gui
+            self.current_mode = EDITOR
+            self.my_gui.set_sidebar(EDITOR)
+        elif mode == PATHFINDER:
+            # Set pathfinder mode, reset solver and update gui
+            self.current_mode = PATHFINDER
+            self.solver.reset(self.cell_grid)
+            self.my_gui.set_sidebar(PATHFINDER)
+        elif mode == MAZEGENERATOR:
+            # Set mazegenerator mode, reset generator and update gui
+            self.current_mode = MAZEGENERATOR
+            self.maze_generator.reset(self.cell_grid)
+            self.my_gui.set_sidebar(MAZEGENERATOR)
+
+    # Draw game
+    def render(self, window):
+        window.fill((50, 50, 50))
+        # Always draw grid
+        self.cell_grid.show(window)
+        # Draw solver/generator based on mode
+        if self.current_mode == PATHFINDER:
+            self.solver.show(window)
+        elif self.current_mode == MAZEGENERATOR:
+            self.maze_generator.show(window)
+        # At last draw gui and flip buffers
+        self.my_gui.show(window)
         pygame.display.flip()
+    
+    def run(self):
+        pygame.init()
 
-    pygame.quit()
-    #cell_grid.save(MAP_DIRECTORY + "my_test_grid.txt")
+        window = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
+        clock = pygame.time.Clock()
 
-main()
+        self.running = True
+        while self.running:
+            time_delta = clock.tick(60) / 1000.0
+            logger.info("Time delta: %f seconds", time_delta)
+            
+            # Process events
+            for event in pygame.event.get():
+                self.process_events(event)
+
+            # Handle input
+            self.handle_input()
+
+            # Update game
+            self.update(time_delta)
+
+            # Render game
+            self.render(window)
+        pygame.quit()
+
+def main():
+    my_game = MyGame()
+    my_game.run()
+
+if __name__ == "__main__":
+    main()

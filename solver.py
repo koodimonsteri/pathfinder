@@ -9,6 +9,7 @@ import math
 
 import pygame
 
+# Base abstract class for different path finding algorithms
 class PathFinder(ABC):
     def __init__(self):
         raise NotImplementedError
@@ -32,6 +33,7 @@ def euclidean_heur(x1, y1, x2, y2):
     y = abs(y1 - y2)
     return math.sqrt(x*x + y*y)
 
+# Diagonal heuristic
 def diagonal_heur(x1, y1, x2, y2):
     x = abs(x1 - x2)
     y = abs(y1 - y2)
@@ -40,6 +42,7 @@ def diagonal_heur(x1, y1, x2, y2):
     d = mmax - mmin
     return math.sqrt(mmin*mmin + mmin*mmin) + d
 
+# A* (A-star) path finding algorithm
 class Astar(PathFinder):
     def __init__(self, grid):
         self.__grid = grid
@@ -49,8 +52,9 @@ class Astar(PathFinder):
         self.solved = False
         self.__current_cell = grid.start_cell
 
+    # Solve 1 step of astar
     def solve_step(self):
-        logger.info("Solving 1 step of astar, solved: %s", self.solved)
+        #logger.info("Solving 1 step of astar, solved: %s", self.solved)
         if not self.solved and len(self.__openset) > 0:
             if self.__current_cell == self.__grid.end_cell:
                 logger.info("Found shortest path!")
@@ -76,20 +80,19 @@ class Astar(PathFinder):
                         d_lowest = d
                         f_lowest = cell.f
                         c_lowest = cell
-            logger.info("Current Cell (%d %d), g %f, h %f, f %f", self.__current_cell.x, self.__current_cell.y, self.__current_cell.g, self.__current_cell.h, self.__current_cell.f)
-            logger.info("Lowest Cell (%d %d), g %f, h %f, f %f", c_lowest.x, c_lowest.y, c_lowest.g, c_lowest.h, c_lowest.f)
+            #logger.info("Current Cell (%d %d), g %f, h %f, f %f", self.__current_cell.x, self.__current_cell.y, self.__current_cell.g, self.__current_cell.h, self.__current_cell.f)
+            #logger.info("Lowest Cell (%d %d), g %f, h %f, f %f", c_lowest.x, c_lowest.y, c_lowest.g, c_lowest.h, c_lowest.f)
             
             self.__current_cell = c_lowest
             self.__openset.remove(self.__current_cell)
             self.__closedset.add(self.__current_cell)
 
-            #neighbors = []
             c_x, c_y = self.__grid.cell_index(self.__current_cell.x, self.__current_cell.y)
-            #diag_dir = [(1, 1), (-1, 1), (-1, -1), (1, -1)]
+            # Loop adjacent cells and update them
             for dir_x, dir_y in [(1,0), (0,1), (-1,0), (0,-1)]:
                 n_x, n_y = (c_x + dir_x, c_y + dir_y)
                 if self.__grid.in_bounds(n_x, n_y):
-                    # Update neighbor heuristics
+                    # Update adjacent neighbor heuristics
                     cell = self.__grid.get_cell(n_x, n_y)
                     if cell not in self.__closedset and cell.type != WALL:
                         self.__update_cell_heuristics(n_x, n_y, e_x, e_y)
@@ -109,8 +112,17 @@ class Astar(PathFinder):
                                 self.__update_cell_heuristics(d_x1, n_y, e_x, e_y, cell)
                             if self.__grid.in_bounds(d_x2, n_y):
                                 self.__update_cell_heuristics(d_x2, n_y, e_x, e_y, cell)             
-            logger.info("Processed a step of astar")
+            #logger.info("Processed a step of astar")
 
+    # TODO: solve astar in one go
+    def solve(self):
+        while not self.solved and len(self.__openset) > 0:
+            self.solve_step()
+
+    # Updates cell heuristics
+    # Parameters x and y are position of cell to be updated
+    # end_x and end_y are position of end cell for heuristic calculation
+    # optional diag_cell parameter is for diagonals
     def __update_cell_heuristics(self, x, y, end_x, end_y, diag_cell=None):
         cell = self.__grid.get_cell(x, y)
         if cell not in self.__closedset and cell.type != WALL:
@@ -137,6 +149,7 @@ class Astar(PathFinder):
                     if cell not in self.__openset:
                         self.__openset.add(cell)
 
+    # Reset cell heuristics in grid
     def __reset_heuristics(self):
         for c in self.__grid:
             c.h = 0
@@ -144,6 +157,7 @@ class Astar(PathFinder):
             c.f = 0
             c.previous = None
 
+    # Reset astar solving
     def reset(self, maze):
         self.__grid = maze
         self.__openset = set()
@@ -154,7 +168,7 @@ class Astar(PathFinder):
         self.__current_cell.g = 0
         self.solved = False
 
-    # Reconstruc path from current cell
+    # Reconstruct path from current cell
     def __get_path(self):
         res = []
         cur = self.__current_cell
@@ -164,6 +178,7 @@ class Astar(PathFinder):
         res.append(cur)
         return res
 
+    # Draw openset, closedset and path
     def show(self, window):
         # First draw openset in light green
         for c in self.__openset:
@@ -176,8 +191,22 @@ class Astar(PathFinder):
         for c in path:
             c.show(window, (0, 250, 100))
 
-
+# Dummy class for Breadth First Search
 class BFS(PathFinder):
+    def __init__(self):
+        pass
+
+    def solve_step(self, parameter_list):
+        pass
+
+    def reset(self):
+        pass
+
+    def show(self):
+        pass
+
+# Dummy class for Depth First Search
+class DFS(PathFinder):
     def __init__(self):
         pass
 

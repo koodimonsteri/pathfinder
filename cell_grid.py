@@ -39,6 +39,7 @@ class CellGrid:
         self.end_cell = self.get_cell(self.size-2, self.size-2)
         self.end_cell.type = END
 
+    # Iterator for CellGrid
     def __iter__(self):
         for j in range(0, self.size):
             for i in range(0, self.size):
@@ -47,12 +48,11 @@ class CellGrid:
     # Edit maze
     # Returns boolean indicating if we updated anything
     def edit(self):
-        logger.info("END CELL: %d %d", self.end_cell.x, self.end_cell.y)
         m_x, m_y = pygame.mouse.get_pos()
         c_x, c_y = self.cell_index(m_x, m_y)
         res = False
         if self.in_bounds(c_x, c_y):
-            #c_y = int(m_y/self.cell_size)
+            
             logger.info("self size: %d m_x: %f m_y: %f Cell Position: (%d, %d)", self.size, m_x, m_y, c_x, c_y)
             keys_pressed = pygame.key.get_pressed()
             mouse_pressed = pygame.mouse.get_pressed()
@@ -76,21 +76,24 @@ class CellGrid:
                 res = True
         return res
 
+    # Draw CellGrid cells
     def show(self, window):
         for cell_row in self.__cell_grid:
             for cell in cell_row:
                 cell.show(window)
 
-
+    # Check if x and y are in bounds of CellGrid
     def in_bounds(self, x, y):
         if x >= 0 and x < self.size and y >= 0 and y < self.size:
             return True
         else:
             return False
 
+    # Returns grid indices from mouse position
     def cell_index(self, m_x, m_y):
         return (int(m_x / self.cell_size), int(m_y / self.cell_size))
 
+    # Get adjacent neighbors
     def get_neighbors(self, cell_x, cell_y):
         res = []
         for dir_x, dir_y in [(1,0), (0,1), (-1,0), (0,-1)]:
@@ -100,30 +103,32 @@ class CellGrid:
                 res.append(self.get_cell(n_x, n_y))
         return res
 
+    # Set Cell
     def set_cell(self, x, y, cell):
         self.__cell_grid[y][x] = cell
     
+    # Get Cell
     def get_cell(self, x, y):
         return self.__cell_grid[y][x]
 
+    # Set cell type
     def set_cell_type(self, x, y, c_type):
         self.__cell_grid[y][x].type = c_type
     
+    # Get cell type
     def get_cell_type(self, x, y):
         return self.__cell_grid[y][x].type
 
+    # Set cell type for all cells
     def set_cell_type_forall(self, c_type):
         for c_row in self.__cell_grid:
             for c in c_row:
                 c.type = c_type      
 
-
     # Saves grid as text file
-    # Write size to first line
-    # Then write grid as 2d array
-    '''def save(self, file_name):
+    def save(self, file_name):
         with open(file_name, "w") as f:
-            f.write("%d\n" % (self.size))
+            f.write("%d %d\n" % (self.size, self.size))
             for row in self.__cell_grid:
                 row_str = ""
                 for cell in row:
@@ -131,14 +136,14 @@ class CellGrid:
                 f.write(row_str + "\n")
 
     # Reads grid from text file
-    # First read size
-    # Then initialize grid and read values
-   def load(self, file_name):
+    def load(self, file_name):
         with open(file_name, "r") as f:
-            size = int(f.readline().strip())
-            self.__cell_grid = [None] * size
-            for i in range(0, size):
-                self.__cell_grid[i] = [None] * size
+            size_parts = f.readline().strip().split(' ')
+            size_x = int(size_parts[0])
+            size_y = int(size_parts[1])
+            self.__cell_grid = [None] * size_y
+            for j in range(0, size_y):
+                self.__cell_grid[j] = [None] * size_x
                 line = f.readline()
-                for j, value in enumerate(line):
-                    self.__cell_grid[i][j] = value # For now assume that all values are valid (written by save())'''
+                for i, value in enumerate(line):
+                    self.__cell_grid[j][i].type = int(value) # For now assume that all values are valid (written by save())
