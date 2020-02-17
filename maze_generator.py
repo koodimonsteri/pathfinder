@@ -175,6 +175,7 @@ class WeirdPrimGenerator(MazeGenerator):
                 cell.type = FLOOR
             self.__maze_todo.remove(cell)
 
+
     def reset(self, grid):
         self.__grid = grid
         self.__maze_todo = set()

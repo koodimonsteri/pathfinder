@@ -188,6 +188,7 @@ class Astar(PathFinder):
         for c in path:
             c.show(window, (0, 250, 100))
 
+
 class Dijkstra(PathFinder):
     def __init__(self, grid):
         self.__grid = grid

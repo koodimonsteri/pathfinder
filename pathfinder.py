@@ -23,6 +23,7 @@ EDITOR = 0
 PATHFINDER = 1
 MAZEGENERATOR = 2
 
+
 class MyGame:
     def __init__(self):
         pygame.init()

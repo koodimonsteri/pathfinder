@@ -96,6 +96,7 @@ class MyGui():
             self.mode_text_box.rebuild()
             self.current_side_bar = GeneratorWindow(self.side_rect, self.gui_manager)
         
+        
     def process_events(self, event):
         self.gui_manager.process_events(event)
 

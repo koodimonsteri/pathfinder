@@ -171,3 +171,4 @@ class CellGrid:
                 line = f.readline()
                 for i, value in enumerate(line):
                     self.__cell_grid[j][i].type = int(value) # For now assume that all values are valid (written by save())
+                    
