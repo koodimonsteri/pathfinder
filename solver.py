@@ -69,20 +69,20 @@ class Astar(PathFinder):
                 return
             
             # End cell indices
-            e_x, e_y = self.__grid.cell_index(self.__grid.end_cell.x, self.__grid.end_cell.y)
+            e_x, e_y = (self.__grid.end_cell.x, self.__grid.end_cell.y)
 
             # Get cell with lowest f value
             c_lowest = None
             f_lowest = 1000000
             d_lowest = 1000000
             for cell in self.__openset:
-                temp_x, temp_y = self.__grid.cell_index(cell.x, cell.y)
+                #temp_x, temp_y = self.__grid.cell_index(cell.x, cell.y)
                 if cell.f < f_lowest:  # Pick cell with lowest f cost
-                    d_lowest = diagonal_heur(temp_x, temp_y, e_x, e_y)
+                    d_lowest = diagonal_heur(cell.x, cell.y, e_x, e_y)
                     c_lowest = cell
                     f_lowest = cell.f
                 elif cell.f == f_lowest:  # If f cost are same, pick the one with lower distance to goal
-                    d = diagonal_heur(temp_x, temp_y, e_x, e_y)
+                    d = diagonal_heur(cell.x, cell.y, e_x, e_y)
                     if d < d_lowest:
                         d_lowest = d
                         f_lowest = cell.f
@@ -94,7 +94,7 @@ class Astar(PathFinder):
             self.__openset.remove(self.__current_cell)
             self.__closedset.add(self.__current_cell)
 
-            c_x, c_y = self.__grid.cell_index(self.__current_cell.x, self.__current_cell.y)
+            c_x, c_y = (self.__current_cell.x, self.__current_cell.y)
             # Loop adjacent cells and update them
             for dir_x, dir_y in [(1,0), (0,1), (-1,0), (0,-1)]:
                 n_x, n_y = (c_x + dir_x, c_y + dir_y)
@@ -200,24 +200,26 @@ class Dijkstra(PathFinder):
     def solve_step(self):
         if len(self.__unvisited) > 0 and not self.solved:
             if self.__current_cell == self.__grid.end_cell:
-                #self.__current_cell == cur_cell
+                logger.info("Found path with Dijkstra!")
                 self.solved = True
                 return
             cer_g, cur_cell = heapq.heappop(self.__unvisited)
             #logger.log("Solving dijkstra! Cell %d %d", cur_cell.x, cur_cell.y)
             self.__visited.add(cur_cell)
-            c_x, c_y = self.__grid.cell_index(cur_cell.x, cur_cell.y)
-            e_x, e_y = self.__grid.cell_index(self.__grid.start_cell.y, self.__grid.end_cell.y)
-            if self.__grid.in_bounds(c_x, c_y):
-                nbrs = self.__grid.get_neighbors(c_x, c_y)
-                for nbr in nbrs:
+            c_x, c_y = (cur_cell.x, cur_cell.y)
+            e_x, e_y = (self.__grid.start_cell.y, self.__grid.end_cell.y)
+            
+            nbrs = self.__grid.get_neighbors(c_x, c_y)
+            for nbr in nbrs:
 
-                    if nbr not in self.__visited and nbr.type != WALL:
-                        g = self.__current_cell.g + 1.0
-                        if g < nbr.g:
-                            nbr.g = g
-                            nbr.previous = cur_cell
-            #heapq.heappop(self.__unvisited)
+                if nbr not in self.__visited and nbr.type != WALL:
+                    g = self.__current_cell.g + 1.0
+                    if g < nbr.g:
+                        nbr.g = g
+                        nbr.previous = cur_cell
+                    
+                    # TODO: Check diagonals
+
             self.__current_cell = cur_cell
             self.__heapify_unvisited()
     
@@ -250,9 +252,7 @@ class Dijkstra(PathFinder):
             c.show(window, (0, 150, 40))
         path = self.__grid.get_path(self.__current_cell)
         for c in path:
-            c.show(window, (0, 200, 50))
-
-
+            c.show(window, (0, 250, 100))
 
 
 # Dummy class for Breadth First Search

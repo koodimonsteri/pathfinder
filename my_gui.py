@@ -22,7 +22,7 @@ SAVE_BUTTON_WIDTH = (SIDEBAR_WIDTH - (MARGIN * 4)) / 2
 
 modes = ["Editor", "Pathfinder", "Mazegenerator"]
 solve_algos = ["Astar", "Dijkstra", "BFS", "DFS"]
-maze_algos = ["Prim's", "Kruskal", "Divide & Conquer"]
+maze_algos = ["Prim's", "RecursiveBackTrack", "Divide & Conquer"]
 
 # Editor window which contains essential information and save/load functionality
 class EditorWindow(UIWindow):

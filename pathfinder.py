@@ -56,6 +56,9 @@ class MyGame:
                 # Reset solver -> set solver to Astar and reset pathfinder mode
                 elif event.text in solve_algos:
                     self.reset_solver(event.text)
+                
+                elif event.text in maze_algos:
+                    self.reset_maze_generator(event.text)
 
             elif event.ui_element.text == "Clear":
                 # Set all cells to FLOOR
@@ -100,6 +103,14 @@ class MyGame:
         elif alg == solve_algos[1]:
             self.solver = Dijkstra(self.cell_grid)
             self.solver.reset(self.cell_grid)
+
+    def reset_maze_generator(self, alg):
+        if alg == maze_algos[0]:
+            self.maze_generator = PrimGenerator(self.cell_grid)
+            self.maze_generator.reset(self.cell_grid)
+        if alg == maze_algos[1]:
+            self.maze_generator = RecBackTrackGenerator(self.cell_grid)
+            self.maze_generator.reset(self.cell_grid)
 
     # Reset solver/generator
     # Optional algorithm parameter (str)
