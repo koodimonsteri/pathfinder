@@ -1,5 +1,5 @@
 # pathfinder
-Path findinging and maze generation visualization in Python
+Path finding and maze generation visualization in Python
 
 run 'pip install -r requirements.txt'
 run pathfinder.py
