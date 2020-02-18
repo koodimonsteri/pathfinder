@@ -20,7 +20,7 @@ class Cell:
         self.type = c_type
         self.f = 0
         self.h = 0
-        self.g = 1000000
+        self.g = 1000000.0
         self.previous = None
 
     # Draw cell
@@ -30,10 +30,15 @@ class Cell:
         else:
             color = (0, 0, 0) if self.type == WALL else (50, 200, 200) if self.type == FLOOR else (40, 150, 40) if self.type == START else (20, 250, 20) if self.type == END else (200, 50, 50)
         pygame.draw.rect(window, color, pygame.Rect(self.w_x, self.w_y, self.size, self.size))
+        #g_str = "{0:.3f}".format(self.g)
+        #mfont = pygame.font.Font(pygame.font.get_default_font(), 8)
+        #text_surface = mfont.render(g_str, True, (0, 0, 0))
+        #window.blit(text_surface, dest=(self.x*self.size,self.y*self.size))
+
 
 class CellGrid:
     def __init__(self, window_size):
-        self.cell_size = 10
+        self.cell_size = 5
         self.size = int(window_size / self.cell_size)
         self.__cell_grid = [[Cell(x, y, self.cell_size, FLOOR) for x in range(0, self.size)] for y in range(0, self.size)]
         self.start_cell = self.get_cell(1, 1)

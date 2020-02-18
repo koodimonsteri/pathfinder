@@ -18,14 +18,11 @@ class MazeGenerator:
     def generate_step(self):
         raise NotImplementedError
 
-def get_nbrs_in_list(cell, c_list, diff):
-    res = []
-    for c in c_list:
-        d_x = int(abs(cell.x - c.x))
-        d_y = int(abs(cell.y - c.y))
-        if d_x == diff * cell.size or d_y == diff * cell.size:
-            res.append(c)
-    return res
+
+def get_cell_in_between(grid: CellGrid, c1, c2):
+    x_off = int((c1.x - c2.x) / 2)
+    y_off = int((c1.y - c2.y) / 2)
+    return grid.get_cell(c2.x + x_off, c2.y + y_off)
 
 # Prim's algorithm
 class PrimGenerator(MazeGenerator):
@@ -55,6 +52,7 @@ class PrimGenerator(MazeGenerator):
             c.show(window, (0,200, 40))
 
     def generate_step(self):
+        
         if len(self.__maze_todo) > 0:
             # Get random cell from todo set
             cell = random.choice(list(self.__maze_todo))
@@ -87,47 +85,44 @@ class RecBackTrackGenerator(MazeGenerator):
     def __init__(self, grid):
         self.__grid = grid
         self.__stack = deque()
-        self.__visited = set()
+        self.__stack_cib = deque()  # Only for rendering, holds cells in between
         self.__current_cell = self.__grid.start_cell
-        self.__stack.append(self.__current_cell)
-        self.__working_set = []
-        for j in range(1, self.__grid.size-1, 2):
-            for i in range(1, self.__grid.size-1, 2):
-                self.__working_set.append(self.__grid.get_cell(i, j))
         self.__grid.set_cell_type_forall(WALL)
         self.__grid.start_cell.type = START
-        self.__grid.end_cell.type = END
 
     def show(self, window):
-        pass
+        for c in self.__stack:
+            c.show(window, (0, 150, 50))
+        for c in self.__stack_cib:
+            c.show(window, (0, 150, 50))
+        self.__current_cell.show(window, (0, 200, 50))
 
     def generate_step(self):
         if len(self.__stack) > 0:
             logger.info("Generating with recursive backtracker!")
-            cur = self.__stack.pop()
-            cur.type = FLOOR
-            self.__current_cell = cur
-            nbrs = get_nbrs_in_list(cur, self.__working_set, 2)
-            for nbr in nbrs:
-                if nbr not in self.__visited:
-                    self.__stack.append(nbr)
-                    self.__visited.add(nbr)
-                    nbr.type = FLOOR
-                    break
+            nbrs = self.__grid.get_neighbors(self.__current_cell.x, self.__current_cell.y, 2)
+            nbrs = [x for x in nbrs if self.__grid.in_bounds(x.x, x.y, 1) and x.type == WALL]
+            if len(nbrs) > 0:
+                nbr = nbrs[random.randint(0, len(nbrs)-1)]
+                nbr.type = FLOOR
+                cib = get_cell_in_between(self.__grid, nbr, self.__current_cell)
+                cib.type = FLOOR
+                self.__current_cell = nbr
+                self.__stack.append(self.__current_cell)
+                self.__stack_cib.append(cib)
+            else:
+                self.__current_cell = self.__stack.pop()
+                if len(self.__stack_cib) > 0:
+                    self.__stack_cib.pop()
+
             
     def reset(self, grid):
         self.__grid = grid
         self.__stack = deque()
         self.__visited = set()
-        self.__current_cell = self.__grid.start_cell
+        self.__current_cell = self.__grid.get_cell(1, 1)
         self.__stack.append(self.__current_cell)
-        self.__working_set = []
-        for j in range(1, self.__grid.size-1, 2):
-            for i in range(1, self.__grid.size-1, 2):
-                self.__working_set.append(self.__grid.get_cell(i, j))
-        self.__grid.set_cell_type_forall(WALL)
         self.__grid.start_cell.type = START
-        self.__grid.end_cell.type = END
 
 # Dummy class for Divide and Conquer algorithm
 class DNQGenerator(MazeGenerator):

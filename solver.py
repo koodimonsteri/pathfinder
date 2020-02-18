@@ -199,7 +199,7 @@ class Dijkstra(PathFinder):
         self.solved = False
 
     def solve_step(self):
-        if len(self.__unvisited) > 0 and not self.solved:
+        '''if len(self.__unvisited) > 0 and not self.solved:
             if self.__current_cell == self.__grid.end_cell:
                 logger.info("Found path with Dijkstra!")
                 self.solved = True
@@ -208,7 +208,6 @@ class Dijkstra(PathFinder):
             #logger.log("Solving dijkstra! Cell %d %d", cur_cell.x, cur_cell.y)
             self.__visited.add(cur_cell)
             c_x, c_y = (cur_cell.x, cur_cell.y)
-            e_x, e_y = (self.__grid.start_cell.y, self.__grid.end_cell.y)
             
             nbrs = self.__grid.get_neighbors(c_x, c_y)
             for nbr in nbrs:
@@ -221,6 +220,58 @@ class Dijkstra(PathFinder):
                     
                     # TODO: Check diagonals
 
+            self.__current_cell = cur_cell
+            self.__heapify_unvisited()'''
+
+        if len(self.__unvisited) > 0 and not self.solved:
+            if self.__current_cell == self.__grid.end_cell:
+                logger.info("Found path with Dijkstra!")
+                self.solved = True
+                return
+            cur_g, cur_cell = heapq.heappop(self.__unvisited)
+            self.__visited.add(cur_cell)
+            for dir_x, dir_y in [(1,0), (0,1), (-1,0), (0,-1)]:
+                n_x, n_y = (cur_cell.x + dir_x, cur_cell.y + dir_y)
+                if self.__grid.in_bounds(n_x, n_y):
+                    nbr = self.__grid.get_cell(n_x, n_y)
+
+                    # Update neighbor cell
+                    if nbr not in self.__visited and nbr.type != WALL:
+                        g = cur_g + 1.0
+                        if g < nbr.g:
+                            nbr.g = g
+                            nbr.previous = cur_cell
+                        # Update adjacent diagonals
+                        if dir_x == 0:
+                            x1 = nbr.x - 1
+                            x2 = nbr.x + 1
+                            if self.__grid.in_bounds(x1, nbr.y):
+                                c = self.__grid.get_cell(x1, nbr.y)
+                                g = cur_g + 1.414213
+                                if g < c.g and c.type != WALL and c not in self.__visited:
+                                    c.g = g
+                                    c.previous = cur_cell
+                            if self.__grid.in_bounds(x2, nbr.y):
+                                c = self.__grid.get_cell(x2, nbr.y)
+                                g = cur_g + 1.414213
+                                if g < c.g and c.type != WALL and c not in self.__visited:
+                                    c.g = g
+                                    c.previous = cur_cell
+                        if dir_y == 0:
+                            y1 = nbr.y - 1
+                            y2 = nbr.y + 1
+                            if self.__grid.in_bounds(nbr.x, y1):
+                                c = self.__grid.get_cell(nbr.x, y1)
+                                g = cur_g + 1.414213
+                                if g < c.g and c.type != WALL and c not in self.__visited:
+                                    c.g = g
+                                    c.previous = cur_cell
+                            if self.__grid.in_bounds(nbr.x, y2):
+                                c = self.__grid.get_cell(nbr.x, y2)
+                                g = cur_g + 1.414213
+                                if g < c.g and c.type != WALL and c not in self.__visited:
+                                    c.g = g
+                                    c.previous = cur_cell
             self.__current_cell = cur_cell
             self.__heapify_unvisited()
     
