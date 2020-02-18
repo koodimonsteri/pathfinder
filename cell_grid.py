@@ -37,8 +37,8 @@ class Cell:
 
 
 class CellGrid:
-    def __init__(self, window_size):
-        self.cell_size = 5
+    def __init__(self, window_size, c_size=5):
+        self.cell_size = c_size
         self.size = int(window_size / self.cell_size)
         self.__cell_grid = [[Cell(x, y, self.cell_size, FLOOR) for x in range(0, self.size)] for y in range(0, self.size)]
         self.start_cell = self.get_cell(1, 1)
@@ -152,28 +152,5 @@ class CellGrid:
     def set_cell_type_forall(self, c_type):
         for c_row in self.__cell_grid:
             for c in c_row:
-                c.type = c_type      
-
-    # Saves grid as text file
-    def save(self, file_name):
-        with open(file_name, "w") as f:
-            f.write("%d %d\n" % (self.size, self.size))
-            for row in self.__cell_grid:
-                row_str = ""
-                for cell in row:
-                    row_str += str(cell.type)
-                f.write(row_str + "\n")
-
-    # Reads grid from text file
-    def load(self, file_name):
-        with open(file_name, "r") as f:
-            size_parts = f.readline().strip().split(' ')
-            size_x = int(size_parts[0])
-            size_y = int(size_parts[1])
-            self.__cell_grid = [None] * size_y
-            for j in range(0, size_y):
-                self.__cell_grid[j] = [None] * size_x
-                line = f.readline()
-                for i, value in enumerate(line):
-                    self.__cell_grid[j][i].type = int(value) # For now assume that all values are valid (written by save())
+                c.type = c_type
                     

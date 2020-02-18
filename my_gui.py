@@ -106,5 +106,7 @@ class MyGui():
     def show(self, window):
         self.gui_manager.draw_ui(window)
 
-    
+    # Crashes if called when not in editormode :)
+    def get_fname_text(self):
+        return self.current_side_bar.fname_text_box.get_text()
 

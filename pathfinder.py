@@ -69,10 +69,13 @@ class MyGame:
             elif event.ui_element.text == "Save":
                 # Save grid to file, TODO save grid
                 logger.info("SAVING")
-
+                fname = self.my_gui.get_fname_text()
+                save(fname, self.cell_grid)
             elif event.ui_element.text == "Load":
                 # Load grid from file TODO load grid
                 logger.info("LOADING")
+                fname = self.my_gui.get_fname_text()
+                self.cell_grid = load(fname)
         self.my_gui.process_events(event)
 
     def handle_input(self):
@@ -171,9 +174,40 @@ class MyGame:
             self.render(window)
         pygame.quit()
 
+
+# Saves grid as text file
+def save(file_name, grid: CellGrid):
+    logger.info("Writing CellGrid to file %s", file_name)
+    with open(MAP_DIRECTORY + file_name, "w") as f:
+        f.write("%d %d\n" % (grid.size, grid.cell_size))
+        grid_str = ""
+        for c in grid:
+            grid_str += str(c.type)
+        f.write(grid_str)
+        
+
+# Reads grid from text file
+def load(file_name):
+    logger.info("Reading Cellgrid from file %s", file_name)
+    with open(MAP_DIRECTORY + file_name, "r") as f:
+        size_parts = f.readline().strip().split(' ')
+        g_size = int(size_parts[0])
+        c_size = int(size_parts[1])
+        m_grid = CellGrid(WINDOW_SIZE, c_size)
+        x = 0
+        y = 0
+        for c in f.readline():
+            m_grid.set_cell(x, y, Cell(x, y, c_size, int(c)))
+            x += 1
+            if x == m_grid.size:
+                y += 1
+                x = 0
+        return m_grid
+
 def main():
     my_game = MyGame()
     my_game.run()
+
 
 if __name__ == "__main__":
     main()
