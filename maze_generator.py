@@ -76,9 +76,10 @@ class PrimGenerator(MazeGenerator):
                     
             self.__maze_todo.remove(cell)
 
-    # Dummy function to generate maze in one go
+    # Generate maze in one go
     def generate_maze(self):
-        pass
+        while len(self.__maze_todo) > 0:
+            self.generate_step()
 
 
 class RecBackTrackGenerator(MazeGenerator):
@@ -115,7 +116,10 @@ class RecBackTrackGenerator(MazeGenerator):
                 if len(self.__stack_cib) > 0:
                     self.__stack_cib.pop()
 
-            
+    def generate_maze(self):
+        while len(self.__stack) > 0:
+            self.generate_step()
+
     def reset(self, grid):
         self.__grid = grid
         self.__stack = deque()

@@ -22,6 +22,7 @@ WINDOW_WIDTH = GRID_SIZE + SIDEBAR_WIDTH
 EDITOR = 0
 PATHFINDER = 1
 MAZEGENERATOR = 2
+REALTIME = 3
 
 
 class MyGame:
@@ -44,48 +45,55 @@ class MyGame:
             if event.user_type == pygame_gui.UI_DROP_DOWN_MENU_CHANGED:
                 # Editor drop_down -> change mode
                 if event.text == modes[EDITOR]:
-                    self.reset_mode(EDITOR)
+                    self.set_mode(EDITOR)
 
                 # Solver drop_down -> reset solver and change mode
                 elif event.text == modes[PATHFINDER]:
-                    self.reset_mode(PATHFINDER)
+                    self.set_mode(PATHFINDER)
 
                 # Generator drop_down -> reset generator and change mode
                 elif event.text == modes[MAZEGENERATOR]:
-                    self.reset_mode(MAZEGENERATOR)
+                    self.set_mode(MAZEGENERATOR)
 
-                # Reset solver -> set solver to Astar and reset pathfinder mode
+                elif event.text == modes[REALTIME]:
+                    self.set_mode(REALTIME)
+
+                # Reset solver
                 elif event.text in solve_algos:
                     self.reset_solver(event.text)
                 
+                # Reset maze generator
                 elif event.text in maze_algos:
                     self.reset_maze_generator(event.text)
 
+            # Set all cells to FLOOR
             elif event.ui_element.text == "Clear":
-                # Set all cells to FLOOR
                 self.cell_grid.set_cell_type_forall(FLOOR)
                 self.cell_grid.start_cell.type = START
                 self.cell_grid.end_cell.type = END
+
+            # Write grid to text file
             elif event.ui_element.text == "Save":
-                # Save grid to file, TODO save grid
-                logger.info("SAVING")
                 fname = self.my_gui.get_fname_text()
                 save(fname, self.cell_grid)
+
+            # Read grid from text file
             elif event.ui_element.text == "Load":
-                # Load grid from file TODO load grid
-                logger.info("LOADING")
                 fname = self.my_gui.get_fname_text()
                 self.cell_grid = load(fname)
+
         self.my_gui.process_events(event)
 
     def handle_input(self):
         keys = pygame.key.get_pressed()
         if keys[pygame.K_1]:
-            self.reset_mode(EDITOR)
+            self.set_mode(EDITOR)
         elif keys[pygame.K_2]:
-            self.reset_mode(PATHFINDER)
+            self.set_mode(PATHFINDER)
         elif keys[pygame.K_3]:
-            self.reset_mode(MAZEGENERATOR)
+            self.set_mode(MAZEGENERATOR)
+        elif keys[pygame.K_4]:
+            self.set_mode(REALTIME)
         elif keys[pygame.K_ESCAPE]:
             # If escaping set running to false
             self.running = False
@@ -98,8 +106,15 @@ class MyGame:
             self.solver.solve_step()
         elif self.current_mode == MAZEGENERATOR:
             self.maze_generator.generate_step()
+
+        elif self.current_mode == REALTIME:
+            # If we updated anything, reset solver and solve path
+            if self.cell_grid.edit_realtime():
+                self.solver.reset(self.cell_grid)
+                self.solver.solve()
         self.my_gui.update(time_delta)
 
+    # Reset solver algorithm
     def reset_solver(self, alg):
         if alg == solve_algos[0]:
             self.solver = Astar(self.cell_grid)
@@ -108,6 +123,7 @@ class MyGame:
             self.solver = Dijkstra(self.cell_grid)
             self.solver.reset(self.cell_grid)
 
+    # Reset maze generator
     def reset_maze_generator(self, alg):
         if alg == maze_algos[0]:
             self.maze_generator = PrimGenerator(self.cell_grid)
@@ -117,8 +133,7 @@ class MyGame:
             self.maze_generator.reset(self.cell_grid)
 
     # Reset solver/generator
-    # Optional algorithm parameter (str)
-    def reset_mode(self, mode):
+    def set_mode(self, mode):
         if mode == EDITOR:
             # Set editor mode and update gui
             self.current_mode = EDITOR
@@ -134,6 +149,9 @@ class MyGame:
             self.current_mode = MAZEGENERATOR
             self.maze_generator.reset(self.cell_grid)
             self.my_gui.set_sidebar(MAZEGENERATOR)
+        elif mode == REALTIME:
+            self.current_mode = REALTIME
+            
 
     # Draw game
     def render(self, window):
@@ -145,7 +163,9 @@ class MyGame:
             self.solver.show(window)
         elif self.current_mode == MAZEGENERATOR:
             self.maze_generator.show(window)
-        # At last draw gui and flip buffers
+        elif self.current_mode == REALTIME:
+            self.solver.show(window)
+        # At last draw gui and swap buffers
         self.my_gui.show(window)
         pygame.display.flip()
     
@@ -154,11 +174,13 @@ class MyGame:
 
         window = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
         clock = pygame.time.Clock()
-
+        fps = 0
+        dt = 0.0
         self.running = True
         while self.running:
             time_delta = clock.tick(60) / 1000.0
-            logger.info("Time delta: %f seconds", time_delta)
+            dt += time_delta
+            #logger.info("Time delta: %f seconds", time_delta)
             
             # Process events
             for event in pygame.event.get():
@@ -172,27 +194,37 @@ class MyGame:
 
             # Render game
             self.render(window)
+
+            fps += 1
+            if dt >= 1.0:
+                dt -= 1.0
+                logger.info("-----FPS %d-----", fps)
+                fps = 0
+
         pygame.quit()
 
-
-# Saves grid as text file
+# Save grid as text file
 def save(file_name, grid: CellGrid):
-    logger.info("Writing CellGrid to file %s", file_name)
-    with open(MAP_DIRECTORY + file_name, "w") as f:
+    try:
+        logger.debug("Writing CellGrid to file %s", file_name)
+        f = open(MAP_DIRECTORY + file_name, "w")
         f.write("%d %d\n" % (grid.size, grid.cell_size))
         grid_str = ""
         for c in grid:
             grid_str += str(c.type)
         f.write(grid_str)
+    except IOError as e:
+        logger.debug("Failed to open %s", file_name)
         
-
 # Reads grid from text file
 def load(file_name):
-    logger.info("Reading Cellgrid from file %s", file_name)
-    with open(MAP_DIRECTORY + file_name, "r") as f:
+    try:
+        f = open(MAP_DIRECTORY + file_name, "r")
+        logger.debug("Reading Cellgrid from file %s", file_name)
         size_parts = f.readline().strip().split(' ')
         g_size = int(size_parts[0])
         c_size = int(size_parts[1])
+        logger.debug("Grid size: %d Cell size: %d", g_size, c_size)
         m_grid = CellGrid(WINDOW_SIZE, c_size)
         x = 0
         y = 0
@@ -203,6 +235,8 @@ def load(file_name):
                 y += 1
                 x = 0
         return m_grid
+    except IOError as e:
+        logger.debug("Failed to load file %s", file_name)
 
 def main():
     my_game = MyGame()

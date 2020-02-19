@@ -20,7 +20,7 @@ SAVE_TEXT_WIDTH = SIDEBAR_WIDTH - (MARGIN * 2)
 SAVE_TEXT_HEIGHT = 40
 SAVE_BUTTON_WIDTH = (SIDEBAR_WIDTH - (MARGIN * 4)) / 2
 
-modes = ["Editor", "Pathfinder", "Mazegenerator"]
+modes = ["Editor", "Pathfinder", "Mazegenerator", "Realtime"]
 solve_algos = ["Astar", "Dijkstra", "BFS", "DFS"]
 maze_algos = ["Prim's", "RecursiveBackTrack", "Divide & Conquer"]
 
