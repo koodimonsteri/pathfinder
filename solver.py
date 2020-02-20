@@ -10,12 +10,6 @@ import heapq
 
 import pygame
 
-def new_cmp_lt(c1, c2):
-    return c1[0] < c2[0]
-
-#override the existing "cmp_lt" module function with your function
-heapq.cmp_lt = new_cmp_lt
-
 # Base abstract class for different path finding algorithms
 class PathFinder(ABC):
     def __init__(self):
@@ -91,6 +85,7 @@ class Astar(PathFinder):
                         d_lowest = d
                         f_lowest = cell.f
                         c_lowest = cell
+
             logger.debug("Current Cell (%d %d), g %f, h %f, f %f", self.__current_cell.x, self.__current_cell.y, self.__current_cell.g, self.__current_cell.h, self.__current_cell.f)
             logger.debug("Lowest Cell  (%d %d), g %f, h %f, f %f", c_lowest.x, c_lowest.y, c_lowest.g, c_lowest.h, c_lowest.f)
             
@@ -124,6 +119,7 @@ class Astar(PathFinder):
                             if self.__grid.in_bounds(d_x2, n_y):
                                 self.__update_cell_heuristics(d_x2, n_y, 1.4)
 
+    # Solve Astar in one go
     def solve(self):
         while not self.solved and len(self.__openset) > 0:
             self.solve_step()
@@ -173,7 +169,8 @@ class Astar(PathFinder):
         # And at last construct path and draw it in bright green
         path = self.__grid.get_path(self.__current_cell)
         for c in path:
-            c.show(window, (0, 250, 100))
+            c.show(window, (0, 200, 100))
+        self.__current_cell.show(window, (100, 250, 150))
 
 
 class Dijkstra(PathFinder):
@@ -233,7 +230,7 @@ class Dijkstra(PathFinder):
 
     # Function to just heapify unvisited cells
     def __heapify_unvisited(self):
-        #cells = [(cell.g, cell) for c_g, cell in self.__unvisited if cell not in self.__visited]
+        cells = [(cell.g, cell) for c_g, cell in self.__unvisited if cell not in self.__visited]
         self.__unvisited = [(cell.g, cell) for c_g, cell in self.__unvisited if cell not in self.__visited]
         setattr(Cell, "__lt__", lambda self, other: self.g < other.g)
         heapq.heapify(self.__unvisited)
@@ -243,6 +240,7 @@ class Dijkstra(PathFinder):
         self.__unvisited = []
         self.__visited = set()
         nonwalls = self.__grid.get_cells(WALL, False)
+        self.__grid.start_cell.type = START
         for c in nonwalls:
             c.g = 100000
             c.previous = None

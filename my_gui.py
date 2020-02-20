@@ -3,51 +3,70 @@ import pygame_gui
 from pygame_gui import UIManager
 from pygame_gui.core import UIWindow
 from pygame_gui.core.ui_container import UIContainer
+from pygame_gui.core.ui_element import UIElement
 from pygame_gui.elements import UIDropDownMenu, UITextEntryLine, UIButton, UITextBox
-
+from pygame import locals
 import logging
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
-MARGIN = 10
-DROPDOWN_HEIGHT = 50
-OFFSCREEN = 1000
-CONTAINER_OFFSET = DROPDOWN_HEIGHT + (MARGIN * 2)
+# Sidebar global offsets
+# Sidebar size
+SIDEBAR_HEIGHT = 400
 SIDEBAR_WIDTH = 200
+# Margin size
+MARGIN = 10
+# Mode text box height
+BOX_HEIGHT = 40
+# Update mode box height
 
-SAVE_OFFSET = 300
-SAVE_TEXT_WIDTH = SIDEBAR_WIDTH - (MARGIN * 2)
-SAVE_TEXT_HEIGHT = 40
-SAVE_BUTTON_WIDTH = (SIDEBAR_WIDTH - (MARGIN * 4)) / 2
+# Container y offset
 
-modes = ["Editor", "Pathfinder", "Mazegenerator", "Realtime"]
-solve_algos = ["Astar", "Dijkstra", "BFS", "DFS"]
+modes = ["Editor", "Pathfinder", "Mazegenerator"]
+solve_algos = ["Astar", "Dijkstra", "DFS"]
 maze_algos = ["Prim's", "RecursiveBackTrack", "Divide & Conquer"]
+update_modes = ["Step", "Continous", "Instant"]
 
 # Editor window which contains essential information and save/load functionality
 class EditorWindow(UIWindow):
-    def __init__(self, rect, manager):
+    def __init__(self, my_rect, manager):
         editor_id = ["Editor"]
-        super().__init__(rect, manager=manager, element_ids=editor_id)
+        super().__init__(my_rect, manager=manager, element_ids=editor_id)
         # Clearing button
-        self.clear_button = UIButton(relative_rect=pygame.Rect(MARGIN, CONTAINER_OFFSET, SIDEBAR_WIDTH-20, DROPDOWN_HEIGHT),
-                                    text="Clear", manager=manager, container=self.get_container())
+        self.clear_button = UIButton(relative_rect = pygame.Rect(0, 0, my_rect.width, BOX_HEIGHT),
+                                    text="Clear",
+                                    manager=manager,
+                                    container=self.get_container())
         # Info text box
+        info_offset_y = BOX_HEIGHT + MARGIN
+        info_height = 120
+        logger.info("myrect height %f", my_rect.height)
         self.info_text = "<font size=2>Keys 1-3 to change mode<br>'S' to place start cell<br>'E' to place end cell<br>Right click to add Wall<br>Left click to remove Wall"
-        self.info_text_box1 = UITextBox(self.info_text, relative_rect=pygame.Rect(MARGIN, CONTAINER_OFFSET*2-MARGIN, SAVE_TEXT_WIDTH, 160),
-                                        manager=manager, container=self.get_container())
+        self.info_text_box1 = UITextBox(self.info_text,
+                                        relative_rect = pygame.Rect(0, info_offset_y, my_rect.width, info_height),
+                                        manager = manager,
+                                        container = self.get_container())
         
         # Loading/saging related things
-        load_rect = pygame.Rect(0, SAVE_OFFSET, SIDEBAR_WIDTH, 100)
+        load_height = (BOX_HEIGHT * 2) + MARGIN
+        load_offset_y = my_rect.height - load_height
+        load_rect = pygame.Rect(0, load_offset_y, my_rect.width, load_height)
         self.load_container = UIContainer(load_rect, manager=manager, container=self.get_container())
-        self.fname_text_box = UITextEntryLine(relative_rect=pygame.Rect(MARGIN, 0, SIDEBAR_WIDTH - (MARGIN*2), SAVE_TEXT_HEIGHT + MARGIN),
-                                            manager=manager, container=self.load_container)
+        self.fname_text_box = UITextEntryLine(relative_rect=pygame.Rect(0, 0, my_rect.width, BOX_HEIGHT),
+                                            manager=manager,
+                                            container=self.load_container)
         self.fname_text_box.set_text("File name.txt")
         # Save and load buttons
-        self.save_button = UIButton(relative_rect=pygame.Rect(MARGIN, SAVE_TEXT_HEIGHT , SAVE_BUTTON_WIDTH, SAVE_TEXT_HEIGHT),
-                                    text="Save", manager=manager, container=self.load_container)
-        self.load_button = UIButton(relative_rect=pygame.Rect((MARGIN*2) + SAVE_BUTTON_WIDTH, SAVE_TEXT_HEIGHT , SAVE_BUTTON_WIDTH, SAVE_TEXT_HEIGHT),
-                                    text="Load", manager=manager, container=self.load_container)
+        button_offset_y = BOX_HEIGHT + MARGIN
+        button_width = (my_rect.width / 2) - MARGIN
+        self.save_button = UIButton(relative_rect=pygame.Rect(0, button_offset_y, button_width, BOX_HEIGHT),
+                                    text = "Save",
+                                    manager = manager,
+                                    container = self.load_container)
+        self.load_button = UIButton(relative_rect=pygame.Rect((MARGIN *2) + button_width, button_offset_y, button_width, BOX_HEIGHT),
+                                    text = "Load",
+                                    manager = manager,
+                                    container = self.load_container)
 
 
 # Solver window to swap between different pathfinding algorithms
@@ -55,10 +74,11 @@ class SolverWindow(UIWindow):
     def __init__(self, rect, manager):
         editor_id = ["Solver"]
         super().__init__(rect, manager, element_ids=editor_id)
-        self.pf_alg_drop_down = UIDropDownMenu(solve_algos, solve_algos[0],
-                                            pygame.Rect((MARGIN, CONTAINER_OFFSET), (SIDEBAR_WIDTH - 20, DROPDOWN_HEIGHT)),
-                                            manager=manager, container=self.get_container())
-    
+        self.pf_alg_drop_down = UIDropDownMenu(solve_algos,
+                                            solve_algos[0],
+                                            pygame.Rect(0, 0, SIDEBAR_WIDTH - 20, BOX_HEIGHT),
+                                            manager=manager,
+                                            container=self.get_container())
     
 
 # Generator window to swap between different maze algorithms
@@ -66,19 +86,85 @@ class GeneratorWindow(UIWindow):
     def __init__(self, rect, manager):
         editor_id = ["Generator"]
         super().__init__(rect, manager, element_ids=editor_id)
-        self.mg_alg_drop_down = UIDropDownMenu(maze_algos, maze_algos[0],
-                                            pygame.Rect((MARGIN, CONTAINER_OFFSET), (SIDEBAR_WIDTH - 20, DROPDOWN_HEIGHT)),
-                                            manager=manager, container=self.get_container())
+        self.mg_alg_drop_down = UIDropDownMenu(maze_algos,
+                                            maze_algos[0],
+                                            pygame.Rect(0, 0, SIDEBAR_WIDTH - 20, BOX_HEIGHT),
+                                            manager=manager,
+                                            container=self.get_container())
+
+class CustomToggleBox(UIWindow):
+    def __init__(self, side_cont, manager):
+        side_rect = side_cont.rect
+        my_rect = pygame.Rect(side_rect.x + MARGIN, side_rect.y + BOX_HEIGHT + (MARGIN * 2), side_rect.width - (MARGIN * 2), BOX_HEIGHT)
+        super().__init__(my_rect, manager, element_ids=update_modes)
+        self.current_mode = 1
+        bw = (my_rect.width) / 3
+        self.buttons = []
+        self.step_button      = UIButton(pygame.Rect(0, 0, bw, BOX_HEIGHT),
+                                        text = "STEP",
+                                        manager = manager,
+                                        container = self.get_container(),
+                                        object_id = "StepButton",
+                                        tool_tip_text = "Step by step updating")
+        self.continous_button = UIButton(pygame.Rect(bw, 0, bw, BOX_HEIGHT),
+                                        text = "CONT",
+                                        manager = manager,
+                                        container = self.get_container(),
+                                        object_id = "ContinousButton",
+                                        tool_tip_text = "Continous updating")
+        self.instant_button   = UIButton(pygame.Rect(bw * 2, 0, bw, BOX_HEIGHT),
+                                        text = "INST",
+                                        manager = manager,
+                                        container = self.get_container(),
+                                        object_id = "InstantButton",
+                                        tool_tip_text = "Realtime updating")
+        self.buttons.append(self.step_button)
+        self.buttons.append(self.continous_button)
+        self.buttons.append(self.instant_button)
+        self.set_mode(self.current_mode)
+        #elf.continous_button.enable()
+        manager.select_focus_element(self.continous_button)
+        
+
+    def set_mode(self, mode):
+        #if self.current_mode != mode:
+        logger.debug("Swapping update mode from %s (%d) -> %s (%d)", update_modes[self.current_mode], self.current_mode, update_modes[mode], mode)
+        self.current_mode = mode
+        for i, b in enumerate(self.buttons):
+            if i != self.current_mode:
+                b.unselect()
+            else:
+                b.select()
+        #self.buttons[self.current_mode].select()
+        #self.update(0)
+
+    def process_event(self, event):
+        #logger.info(event)
+        if event.type == pygame.USEREVENT and event.user_type == pygame_gui.UI_BUTTON_PRESSED:
+            if event.ui_element.text == "STEP":
+                self.set_mode(0)
+            elif event.ui_element.text == "CONT":
+                self.set_mode(1)
+            elif event.ui_element.text == "INST":
+                self.set_mode(2)
+            
 
 # Simple gui class to handle different side windows
-class MyGui():
-    def __init__(self, manager):
+class MyGui:
+    def __init__(self, manager, x, y, width, height):
         self.gui_manager = manager
-        self.side_rect = pygame.Rect(400, 0, SIDEBAR_WIDTH, 400)
-        self.sidebar_container = UIContainer(pygame.Rect((400, 0), (SIDEBAR_WIDTH, 400)), self.gui_manager)
-        self.current_side_bar = EditorWindow(self.side_rect, manager)
-        self.mode_text_box = UITextBox(self.current_side_bar.element_ids[0], pygame.Rect(MARGIN, MARGIN, SIDEBAR_WIDTH - (2*MARGIN), 50), manager = self.gui_manager, container=self.sidebar_container)
-        
+        self.rect = pygame.Rect(x, y, width, height)
+        #self.temp_rect = pygame.Rect(400, CONTAINER_OFFSET_Y, SIDEBAR_WIDTH, 400-CONTAINER_OFFSET_Y)
+        self.sidebar_container = UIContainer(self.rect, self.gui_manager)
+        self.update_mode_boxes = CustomToggleBox(self.sidebar_container, manager)
+        self.mode_window_rect = pygame.Rect(x + MARGIN, y + (BOX_HEIGHT * 2) + (MARGIN * 3), width - (MARGIN * 2), height - (MARGIN * 4) - (BOX_HEIGHT * 2))
+        self.current_side_bar = EditorWindow(self.mode_window_rect, self.gui_manager)
+        self.mode_text_box = UITextBox(modes[0],
+                                    pygame.Rect(MARGIN, MARGIN, width - (2 * MARGIN), BOX_HEIGHT),
+                                    manager = self.gui_manager,
+                                    container=self.sidebar_container)
+        manager.ui_theme.reload_theming()
+
     # Set sidebar to newmode
     # Kills old sidebar and initializes new
     def set_sidebar(self, newmode):
@@ -86,16 +172,16 @@ class MyGui():
         if newmode == 0:
             self.mode_text_box.html_text = modes[newmode]
             self.mode_text_box.rebuild()
-            self.current_side_bar = EditorWindow(self.side_rect, self.gui_manager)
+            self.current_side_bar = EditorWindow(self.mode_window_rect, self.gui_manager)
         elif newmode == 1:
             self.mode_text_box.html_text = modes[newmode]
             self.mode_text_box.rebuild()
-            self.current_side_bar = SolverWindow(self.side_rect, self.gui_manager)                
+            self.current_side_bar = SolverWindow(self.mode_window_rect, self.gui_manager)         
         elif newmode == 2:
             self.mode_text_box.html_text = modes[newmode]
             self.mode_text_box.rebuild()
-            self.current_side_bar = GeneratorWindow(self.side_rect, self.gui_manager)
-        
+            self.current_side_bar = GeneratorWindow(self.mode_window_rect, self.gui_manager)
+                   
         
     def process_events(self, event):
         self.gui_manager.process_events(event)
@@ -109,4 +195,5 @@ class MyGui():
     # Crashes if called when not in editormode :)
     def get_fname_text(self):
         return self.current_side_bar.fname_text_box.get_text()
+
 

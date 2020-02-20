@@ -34,6 +34,7 @@ class Cell:
         #mfont = pygame.font.Font(pygame.font.get_default_font(), 8)
         #text_surface = mfont.render(g_str, True, (0, 0, 0))
         #window.blit(text_surface, dest=(self.x*self.size,self.y*self.size))
+    
 
 class CellGrid:
     def __init__(self, window_size, c_size=5):
@@ -63,43 +64,29 @@ class CellGrid:
             keys_pressed = pygame.key.get_pressed()
             mouse_pressed = pygame.mouse.get_pressed()
             
-            if mouse_pressed[0]:
-                if keys_pressed[pygame.K_s]:
-                    s_x, s_y = (self.start_cell.x, self.start_cell.y)
-                    self.set_cell_type(s_x, s_y, FLOOR)
-                    self.start_cell = self.get_cell(c_x, c_y)
-                    self.set_cell_type(c_x, c_y, START)
-                    logger.debug("Moved END cell from (%d, %d) --> (%d, %d)", s_x, s_y, c_x, c_y)
-                elif keys_pressed[pygame.K_e]:
-                    e_x, e_y = (self.end_cell.x, self.end_cell.y)
-                    self.set_cell_type(e_x, e_y, FLOOR)
-                    self.end_cell = self.get_cell(c_x, c_y)
-                    self.set_cell_type(c_x, c_y, END)
-                    logger.debug("Moved END cell from (%d, %d) --> (%d, %d)", e_x, e_y, c_x, c_y)
-                else:
-                    self.set_cell_type(c_x, c_y, WALL)
-                    logger.debug("Edit cell (%d, %d) type to WALL", c_x, c_y)
+            if keys_pressed[pygame.K_s]:
+                s_x, s_y = (self.start_cell.x, self.start_cell.y)
+                self.set_cell_type(s_x, s_y, FLOOR)
+                self.start_cell = self.get_cell(c_x, c_y)
+                self.set_cell_type(c_x, c_y, START)
+                logger.debug("Moved END cell from (%d, %d) --> (%d, %d)", s_x, s_y, c_x, c_y)
+                res = True
+            elif keys_pressed[pygame.K_e]:
+                e_x, e_y = (self.end_cell.x, self.end_cell.y)
+                self.set_cell_type(e_x, e_y, FLOOR)
+                self.end_cell = self.get_cell(c_x, c_y)
+                self.set_cell_type(c_x, c_y, END)
+                logger.debug("Moved END cell from (%d, %d) --> (%d, %d)", e_x, e_y, c_x, c_y)
+                res = True
+            elif mouse_pressed[0]:
+                self.set_cell_type(c_x, c_y, WALL)
+                logger.debug("Edit cell (%d, %d) type to WALL", c_x, c_y)
                 res = True
             elif mouse_pressed[2]:
                 self.set_cell_type(c_x, c_y, FLOOR)
                 logger.debug("Edit cell (%d, %d) type to WALL", c_x, c_y)
                 res = True
-        return res
-
-    # Update end cell position based on mouse
-    # Return boolean indicating if end cell position changed
-    def edit_realtime(self):
-        m_x, m_y = pygame.mouse.get_pos()
-        c_x, c_y = self.cell_index(m_x, m_y)
-        res = False
-        if self.in_bounds(c_x, c_y):
-            cur_cell = self.get_cell(c_x, c_y)
-            if cur_cell != self.end_cell:
-                e_x, e_y = (self.end_cell.x, self.end_cell.y)
-                self.set_cell_type(self.end_cell.x, self.end_cell.y, FLOOR)
-                self.end_cell = cur_cell
-                cur_cell.type = END
-                res = True
+            
         return res
 
     # Draw CellGrid cells

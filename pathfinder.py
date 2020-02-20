@@ -19,27 +19,39 @@ SIDEBAR_WIDTH = 200
 WINDOW_HEIGHT = GRID_SIZE
 WINDOW_WIDTH = GRID_SIZE + SIDEBAR_WIDTH
 
+# Update modes
 EDITOR = 0
 PATHFINDER = 1
 MAZEGENERATOR = 2
 REALTIME = 3
 
+# update_modes = ["Step", "Continous", "Instant"]
+STEP = 0
+CONTINOUS = 1
+INSTANT = 2
+
 
 class MyGame:
     def __init__(self):
         pygame.init()
-        self.gui_manager = pygame_gui.UIManager((WINDOW_WIDTH, WINDOW_HEIGHT))
+        self.gui_manager = pygame_gui.UIManager((WINDOW_WIDTH, WINDOW_HEIGHT), "button_theme.json")
         self.cell_grid = CellGrid(WINDOW_SIZE)
         self.solver = Astar(self.cell_grid)
         self.maze_generator = PrimGenerator(self.cell_grid)
-        self.my_gui = MyGui(self.gui_manager)
+        self.my_gui = MyGui(self.gui_manager, GRID_SIZE, 0, SIDEBAR_WIDTH, WINDOW_HEIGHT)
         self.current_mode = EDITOR
+        self.current_update_mode = CONTINOUS
         self.running = False
+        self.__mouse_click = False
         
     def process_events(self, event):
         if event.type == pygame.QUIT:
-                self.running = False
+            self.running = False
         
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if event.button == pygame.BUTTON_LEFT:
+                self.__mouse_click = True
+
         if event.type == pygame.USEREVENT:
             # Check drop down changes
             if event.user_type == pygame_gui.UI_DROP_DOWN_MENU_CHANGED:
@@ -55,9 +67,6 @@ class MyGame:
                 elif event.text == modes[MAZEGENERATOR]:
                     self.set_mode(MAZEGENERATOR)
 
-                elif event.text == modes[REALTIME]:
-                    self.set_mode(REALTIME)
-
                 # Reset solver
                 elif event.text in solve_algos:
                     self.reset_solver(event.text)
@@ -65,6 +74,18 @@ class MyGame:
                 # Reset maze generator
                 elif event.text in maze_algos:
                     self.reset_maze_generator(event.text)
+            
+            # Switch to step by step updating and reset solver
+            elif event.ui_element.text == "STEP":
+                self.set_update_mode(0)
+                
+            # Switch to continous updating
+            elif event.ui_element.text == "CONT":
+                self.set_update_mode(1)
+
+            # Switch to realtime updating
+            elif event.ui_element.text == "INST":
+                self.set_update_mode(2)
 
             # Set all cells to FLOOR
             elif event.ui_element.text == "Clear":
@@ -80,38 +101,69 @@ class MyGame:
             # Read grid from text file
             elif event.ui_element.text == "Load":
                 fname = self.my_gui.get_fname_text()
-                self.cell_grid = load(fname)
-
+                cg = load(fname)
+                if cg != None:
+                    self.cell_grid = cg
+                else:
+                    logger.info("Failed to load cell grid! %s", fname)
         self.my_gui.process_events(event)
 
     def handle_input(self):
         keys = pygame.key.get_pressed()
+        #mkeys = pygame.mouse.get_
         if keys[pygame.K_1]:
             self.set_mode(EDITOR)
         elif keys[pygame.K_2]:
             self.set_mode(PATHFINDER)
         elif keys[pygame.K_3]:
             self.set_mode(MAZEGENERATOR)
-        elif keys[pygame.K_4]:
-            self.set_mode(REALTIME)
+        
         elif keys[pygame.K_ESCAPE]:
             # If escaping set running to false
             self.running = False
 
     # Update game based on mode
+    
     def update(self, time_delta):
         if self.current_mode == EDITOR:
             self.cell_grid.edit()
         elif self.current_mode == PATHFINDER:
-            self.solver.solve_step()
-        elif self.current_mode == MAZEGENERATOR:
-            self.maze_generator.generate_step()
-
-        elif self.current_mode == REALTIME:
-            # If we updated anything, reset solver and solve path
-            if self.cell_grid.edit_realtime():
+            # Step by step mode -> check for mouse clicks in grid and solve 1 step if true
+            if self.current_update_mode == STEP:
+                m_x, m_y = pygame.mouse.get_pos()
+                c_x, c_y = self.cell_grid.cell_index(m_x, m_y)
+                if self.__mouse_click and self.cell_grid.in_bounds(c_x, c_y):
+                    self.solver.solve_step()
+                    self.__mouse_click = False
+                
+            # Continous mode -> solve 1 step
+            elif self.current_update_mode == CONTINOUS:
+                self.solver.solve_step()
+            
+            # Instant mode -> check for mouse movement and in grid and reset and solve if true
+            elif self.current_update_mode == INSTANT and self.cell_grid.edit():
+                #if self.cell_grid.edit(): 
                 self.solver.reset(self.cell_grid)
                 self.solver.solve()
+            else:
+                self.solver.solve()
+        elif self.current_mode == MAZEGENERATOR:
+            # Step by step mode -> check for mouse clicks in grid area and generate 1 step if true
+            if self.current_update_mode == STEP:
+                m_x, m_y = pygame.mouse.get_pos()
+                c_x, c_y = self.cell_grid.cell_index(m_x, m_y)
+                if self.__mouse_click and self.cell_grid.in_bounds(c_x, c_y):
+                    self.maze_generator.generate_step()
+                    self.__mouse_click = False
+
+            # Continous mode -> generate 1 step of maze
+            elif self.current_update_mode == CONTINOUS:
+                self.maze_generator.generate_step()
+
+            # Instant mode -> generate maze in one go
+            elif self.current_update_mode == INSTANT:
+                self.maze_generator.generate_maze()
+
         self.my_gui.update(time_delta)
 
     # Reset solver algorithm
@@ -147,11 +199,15 @@ class MyGame:
         elif mode == MAZEGENERATOR:
             # Set mazegenerator mode, reset generator and update gui
             self.current_mode = MAZEGENERATOR
-            self.maze_generator.reset(self.cell_grid)
+            self.reset_maze_generator(maze_algos[0])
             self.my_gui.set_sidebar(MAZEGENERATOR)
-        elif mode == REALTIME:
-            self.current_mode = REALTIME
-            
+        
+    def set_update_mode(self, u_mode):
+        self.current_update_mode = u_mode
+        if self.current_mode == PATHFINDER:
+            self.solver.reset(self.cell_grid)
+        elif self.current_mode == MAZEGENERATOR:
+            self.maze_generator.reset(self.cell_grid)
 
     # Draw game
     def render(self, window):

@@ -38,7 +38,7 @@ class PrimGenerator(MazeGenerator):
         self.__visited = set()
         self.__grid.set_cell_type_forall(WALL)
         # Get first cell by random
-        cell = self.__grid.get_cell(random.randint(1, self.__grid.size-1), random.randint(1, self.__grid.size-1))
+        cell = self.__grid.start_cell
         cell.type = FLOOR
         self.__visited.add(cell)
         # Get neighbors of the first cell and add them to todo set
@@ -123,10 +123,12 @@ class RecBackTrackGenerator(MazeGenerator):
     def reset(self, grid):
         self.__grid = grid
         self.__stack = deque()
+        self.__stack_cib = deque()
         self.__visited = set()
-        self.__current_cell = self.__grid.get_cell(1, 1)
+        self.__current_cell = self.__grid.start_cell
         self.__stack.append(self.__current_cell)
-        self.__grid.start_cell.type = START
+        self.__grid.set_cell_type_forall(WALL)
+        self.__current_cell.type = FLOOR
 
 # Dummy class for Divide and Conquer algorithm
 class DNQGenerator(MazeGenerator):
