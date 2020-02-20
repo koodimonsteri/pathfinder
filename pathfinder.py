@@ -193,13 +193,13 @@ class MyGame:
         elif mode == PATHFINDER:
             # Set pathfinder mode, reset solver and update gui
             self.current_mode = PATHFINDER
-            self.reset_solver(solve_algos[0])
+            self.reset_solver(solve_algos[self.my_gui.current_solve_alg])
             self.my_gui.set_sidebar(PATHFINDER)
     
         elif mode == MAZEGENERATOR:
             # Set mazegenerator mode, reset generator and update gui
             self.current_mode = MAZEGENERATOR
-            self.reset_maze_generator(maze_algos[0])
+            self.reset_maze_generator(maze_algos[self.my_gui.current_maze_alg])
             self.my_gui.set_sidebar(MAZEGENERATOR)
         
     def set_update_mode(self, u_mode):

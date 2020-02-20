@@ -71,23 +71,24 @@ class EditorWindow(UIWindow):
 
 # Solver window to swap between different pathfinding algorithms
 class SolverWindow(UIWindow):
-    def __init__(self, rect, manager):
+    def __init__(self, rect, manager, alg_idx):
         editor_id = ["Solver"]
         super().__init__(rect, manager, element_ids=editor_id)
         self.pf_alg_drop_down = UIDropDownMenu(solve_algos,
-                                            solve_algos[0],
+                                            solve_algos[alg_idx],
                                             pygame.Rect(0, 0, SIDEBAR_WIDTH - 20, BOX_HEIGHT),
                                             manager=manager,
                                             container=self.get_container())
+        
     
 
 # Generator window to swap between different maze algorithms
 class GeneratorWindow(UIWindow):
-    def __init__(self, rect, manager):
+    def __init__(self, rect, manager, alg_idx):
         editor_id = ["Generator"]
         super().__init__(rect, manager, element_ids=editor_id)
         self.mg_alg_drop_down = UIDropDownMenu(maze_algos,
-                                            maze_algos[0],
+                                            maze_algos[alg_idx],
                                             pygame.Rect(0, 0, SIDEBAR_WIDTH - 20, BOX_HEIGHT),
                                             manager=manager,
                                             container=self.get_container())
@@ -135,8 +136,6 @@ class CustomToggleBox(UIWindow):
                 b.unselect()
             else:
                 b.select()
-        #self.buttons[self.current_mode].select()
-        #self.update(0)
 
     def process_event(self, event):
         #logger.info(event)
@@ -163,7 +162,8 @@ class MyGui:
                                     pygame.Rect(MARGIN, MARGIN, width - (2 * MARGIN), BOX_HEIGHT),
                                     manager = self.gui_manager,
                                     container=self.sidebar_container)
-        manager.ui_theme.reload_theming()
+        self.current_solve_alg = 0
+        self.current_maze_alg = 0
 
     # Set sidebar to newmode
     # Kills old sidebar and initializes new
@@ -176,14 +176,19 @@ class MyGui:
         elif newmode == 1:
             self.mode_text_box.html_text = modes[newmode]
             self.mode_text_box.rebuild()
-            self.current_side_bar = SolverWindow(self.mode_window_rect, self.gui_manager)         
+            self.current_side_bar = SolverWindow(self.mode_window_rect, self.gui_manager, self.current_solve_alg)         
         elif newmode == 2:
             self.mode_text_box.html_text = modes[newmode]
             self.mode_text_box.rebuild()
-            self.current_side_bar = GeneratorWindow(self.mode_window_rect, self.gui_manager)
+            self.current_side_bar = GeneratorWindow(self.mode_window_rect, self.gui_manager, self.current_maze_alg)
                    
         
     def process_events(self, event):
+        if event.type == pygame.USEREVENT and event.user_type == pygame_gui.UI_DROP_DOWN_MENU_CHANGED:
+            if event.text in solve_algos:
+                self.current_solve_alg = solve_algos.index(event.text)
+            elif event.text in maze_algos:
+                self.current_maze_alg = maze_algos.index(event.text)
         self.gui_manager.process_events(event)
 
     def update(self, time_delta):
