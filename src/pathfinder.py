@@ -11,7 +11,8 @@ from solver import *
 from maze_generator import *
 from my_gui import *
 
-MAP_DIRECTORY = "maps/"
+MAP_DIRECTORY = "../maps/"
+RES_DIRECTORY = "../res/"
 
 WINDOW_SIZE = 400
 GRID_SIZE = 400
@@ -48,7 +49,7 @@ class Drag:
 class MyGame:
     def __init__(self):
         pygame.init()
-        self.gui_manager = pygame_gui.UIManager((WINDOW_WIDTH, WINDOW_HEIGHT), "button_theme.json")
+        self.gui_manager = pygame_gui.UIManager((WINDOW_WIDTH, WINDOW_HEIGHT), RES_DIRECTORY + "button_theme.json")
         self.grid_surface = pygame.Surface((GRID_SIZE, GRID_SIZE))
         mrect = pygame.Rect(0, 0, 400, 400)
         self.grid_surface.set_clip(mrect)
@@ -322,7 +323,12 @@ def load(file_name):
         x = 0
         y = 0
         for c in f.readline():
-            m_grid.set_cell(x, y, Cell(x, y, c_size, int(c)))
+            cell = Cell(x, y, c_size, int(c))
+            m_grid.set_cell(x, y, cell)
+            if cell.type == START:
+                m_grid.start_cell = cell
+            elif cell.type == END:
+                m_grid.end_cell = cell
             x += 1
             if x == m_grid.size:
                 y += 1
