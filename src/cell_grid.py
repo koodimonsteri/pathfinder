@@ -12,6 +12,8 @@ FLOOR = 1
 START = 2
 END = 3
 
+cell_types = ["Wall", "Floor", "Start", "End"]
+
 class Cell:
     def __init__(self, x, y, size, c_type=FLOOR):
         self.x = x
@@ -41,6 +43,8 @@ class Cell:
         #text_surface = mfont.render(g_str, True, (0, 0, 0))
         #window.blit(text_surface, dest=(self.x*self.size,self.y*self.size))
     
+    def __repr__(self):
+        return "Cell (%d, %d), type: %s" % (self.x, self.y, cell_types[self.type])
 
 class CellGrid:
     def __init__(self, window_size, c_size=5):
@@ -86,11 +90,11 @@ class CellGrid:
                 self.set_cell_type(c_x, c_y, FLOOR)
                 logger.debug("Edit cell (%d, %d) type to WALL", c_x, c_y)
                 res = True
-
+        
         return res
 
     def drag_grid(self, drag):
-        logger.info("Dragging grid, %f %f - %f %f", drag.mx, drag.my, drag.dx, drag.dy)
+        logger.info("Dragging! Mouse pos (%f %f) - rel (%f %f)", drag.mx, drag.my, drag.dx, drag.dy)
 
 
     # Update zoom level
@@ -98,22 +102,21 @@ class CellGrid:
     def zoom_grid(self, zoom_in):
         #zoom = min(20.0, max(1.0, self.current_zoom + zoom_update))
         mx, my = pygame.mouse.get_pos()
-        self.camera.zoom(mx, my, zoom_in)
-        for c in self:
-            c.size = int(self.cell_size * self.camera.current_zoom)
-            c.w_x = c.x * c.size
-            c.w_y = c.y * c.size
+        #self.camera.zoom(mx, my, zoom_in)
+        #for c in self:
+        #    c.size = int(self.cell_size * self.camera.current_zoom)
+        #    c.w_x = c.x * c.size
+        #    c.w_y = c.y * c.size
         logger.info("Mouse pos: (%d, %d), size: (%d), x_off: (%f), y_off: (%f) cur_zoom: (%f), zoom_upd (%f)", mx, my, self.camera.size, self.camera.x, self.camera.y, self.camera.current_zoom, zoom_in)
 
 
     # Notes
     # Modes:   1 = EDIT, 2 = SOLVE, 3 = GENERATE         <--- in pathfinder
-    # Cells:   (all modes) ( w = WALL, f = FLOOR, s = START, e = END ) + left click    <--- in pathfinder -> edit grid
+    # Cells:   (EDITOR/SOLVER) ( w = WALL, f = FLOOR, s = START, e = END )    <--- in pathfinder
     # Updates:
     # (solve/generate in step mode)space = STEP SOLVE,
     # (all)scroll = ZOOM GRID,
     # (all)left click = DRAG GRID
-    #
 
     # Draw CellGrid cells
     def show(self, window):
