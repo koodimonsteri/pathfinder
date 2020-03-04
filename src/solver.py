@@ -31,6 +31,9 @@ class PathFinder(ABC):
 
     def show(self):
         raise NotImplementedError
+
+    def cell_in_use(self):
+        raise NotImplementedError
     
 
 # Manhattan heuristic
@@ -44,7 +47,7 @@ def euclidean_heur(x1, y1, x2, y2):
     return math.sqrt(x*x + y*y)
 
 # Diagonal heuristic
-def diagonal_heur(x1, y1, x2, y2):
+def octile_heur(x1, y1, x2, y2):
     x = abs(x1 - x2)
     y = abs(y1 - y2)
     mmin = min(x, y)
@@ -81,11 +84,11 @@ class Astar(PathFinder):
             d_lowest = 1000000
             for cell in self.__openset:
                 if cell.f < f_lowest:  # Pick cell with lowest f cost
-                    d_lowest = diagonal_heur(cell.x, cell.y, e_x, e_y)
+                    d_lowest = octile_heur(cell.x, cell.y, e_x, e_y)
                     c_lowest = cell
                     f_lowest = cell.f
                 elif cell.f == f_lowest:  # If f cost are same, pick the one with lower distance to goal
-                    d = diagonal_heur(cell.x, cell.y, e_x, e_y)
+                    d = octile_heur(cell.x, cell.y, e_x, e_y)
                     if d < d_lowest:
                         d_lowest = d
                         f_lowest = cell.f
@@ -108,26 +111,30 @@ class Astar(PathFinder):
                     if cell not in self.__closedset and cell.type != WALL:
                         self.__update_cell_heuristics(n_x, n_y, 1)
 
+                        diag_g = 1.414213
                         # Check for diagonals adjacent to neighbor and update them
                         if dir_y == 0:
                             d_y1 = n_y - 1
                             d_y2 = n_y + 1
                             if self.__grid.in_bounds(n_x, d_y1):
-                                self.__update_cell_heuristics(n_x, d_y1, 1.4)
+                                self.__update_cell_heuristics(n_x, d_y1, diag_g)
                             if self.__grid.in_bounds(n_x, d_y2):
-                                self.__update_cell_heuristics(n_x, d_y2, 1.4)
+                                self.__update_cell_heuristics(n_x, d_y2, diag_g)
                         elif dir_x == 0:
                             d_x1 = n_x - 1
                             d_x2 = n_x + 1
                             if self.__grid.in_bounds(d_x1, n_y):
-                                self.__update_cell_heuristics(d_x1, n_y, 1.4)
+                                self.__update_cell_heuristics(d_x1, n_y, diag_g)
                             if self.__grid.in_bounds(d_x2, n_y):
-                                self.__update_cell_heuristics(d_x2, n_y, 1.4)
+                                self.__update_cell_heuristics(d_x2, n_y, diag_g)
 
     # Solve Astar in one go
     def solve(self):
         while not self.solved and len(self.__openset) > 0:
             self.solve_step()
+
+    def cell_in_use(self, cell):
+        return cell == self.__current_cell or cell in self.__openset or cell in self.__closedset or cell == self.__grid.start_cell or cell == self.__grid.end_cell
 
     # Updates cell heuristics
     # Parameters x and y are position of cell to be updated, g is g-cost from previous cell
@@ -135,7 +142,7 @@ class Astar(PathFinder):
         cell = self.__grid.get_cell(x, y)
         if cell not in self.__closedset and cell.type != WALL:
             g = self.__current_cell.g + g
-            h = diagonal_heur(cell.x, cell.y, self.__grid.end_cell.x, self.__grid.end_cell.y)
+            h = octile_heur(cell.x, cell.y, self.__grid.end_cell.x, self.__grid.end_cell.y)
             if g < cell.g:
                 cell.g = g
                 cell.h = h
@@ -244,6 +251,9 @@ class Dijkstra(PathFinder):
         while not self.solved and len(self.__unvisited) > 0:
             self.solve_step()
 
+    def cell_in_use(self, cell):
+        return cell == self.__current_cell or cell in self.__unvisited or cell in self.__visited or cell == self.__grid.start_cell or cell == self.__grid.end_cell
+
     def __update_cell_heuristics(self, x, y, g, cur_cell):
         c = self.__grid.get_cell(x, y)
         if g < c.g and c not in self.__visited and c.type != WALL:
@@ -309,6 +319,9 @@ class DFS(PathFinder):
     def solve(self):
         while not self.solved and len(self.__stack) > 0:
             self.solve_step()
+
+    def cell_in_use(self, cell):
+        return cell == self.__current_cell or cell in self.__visited or cell in self.__stack or cell == self.__grid.start_cell or cell == self.__grid.end_cell
 
     def reset(self, grid):
         self.__grid = grid

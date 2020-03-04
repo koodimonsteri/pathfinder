@@ -65,11 +65,11 @@ class CellGrid:
                 yield self.__cell_grid[j][i]
 
     # Edit maze
-    # Returns boolean indicating if we updated anything
+    # Returns edited cell or None
     def edit(self):
         m_x, m_y = pygame.mouse.get_pos()
         c_x, c_y = self.cell_index(m_x, m_y)
-        res = False
+        res = None
         if self.camera.in_bounds(m_x, m_y):
             
             keys_pressed = pygame.key.get_pressed()
@@ -77,19 +77,19 @@ class CellGrid:
             if keys_pressed[pygame.K_s]:
                 self.set_cell_type(c_x, c_y, START)
                 logger.debug("Set START cell to (%d, %d)", c_x, c_y)
-                res = True
+                res = self.get_cell(c_x, c_y)
             elif keys_pressed[pygame.K_e]:
                 self.set_cell_type(c_x, c_y, END)
                 logger.debug("Set END cell to (%d, %d)", c_x, c_y)
-                res = True
+                res = self.get_cell(c_x, c_y)
             elif keys_pressed[pygame.K_w]:
                 self.set_cell_type(c_x, c_y, WALL)
                 logger.debug("Edit cell (%d, %d) type to WALL", c_x, c_y)
-                res = True
+                res = self.get_cell(c_x, c_y)
             elif keys_pressed[pygame.K_f]:
                 self.set_cell_type(c_x, c_y, FLOOR)
                 logger.debug("Edit cell (%d, %d) type to WALL", c_x, c_y)
-                res = True
+                res = self.get_cell(c_x, c_y)
         
         return res
 

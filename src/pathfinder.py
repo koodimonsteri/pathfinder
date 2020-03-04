@@ -164,7 +164,8 @@ class MyGame:
         elif self.current_mode == PATHFINDER:
             # Step by step mode -> check for step and solve 1 step
             if self.current_update_mode == STEP:
-                if self.cell_grid.edit():
+                ed_cell = self.cell_grid.edit()
+                if ed_cell != None and self.solver.cell_in_use(ed_cell):
                     self.solver.reset(self.cell_grid)
                 if self.__step:
                     self.solver.solve_step()
@@ -172,14 +173,16 @@ class MyGame:
                 
             # Continous mode -> solve 1 step
             elif self.current_update_mode == CONTINOUS:
-                if self.cell_grid.edit():
+                ed_cell = self.cell_grid.edit()
+                if ed_cell != None and self.solver.cell_in_use(ed_cell):
                     self.solver.reset(self.cell_grid)
                 if not self.solver.solved:
                     self.solver.solve_step()
             
             # Instant mode -> try to edit grid and reset and solve if true
             elif self.current_update_mode == INSTANT:
-                if self.cell_grid.edit():
+                ed_cell = self.cell_grid.edit()
+                if ed_cell != None and self.solver.cell_in_use(ed_cell):
                     self.solver.reset(self.cell_grid)
                 if not self.solver.solved:
                     self.solver.solve()
