@@ -105,17 +105,9 @@ class MyGame:
         elif event.type == pygame.USEREVENT:
             # Drop down changes
             if event.user_type == pygame_gui.UI_DROP_DOWN_MENU_CHANGED:
-                if event.text == modes[EDITOR]:
-                    self.set_mode(EDITOR)
-
-                elif event.text == modes[PATHFINDER]:
-                    self.set_mode(PATHFINDER)
-
-                elif event.text == modes[MAZEGENERATOR]:
-                    self.set_mode(MAZEGENERATOR)
 
                 # Reset solver
-                elif event.text in solve_algos:
+                if event.text in solve_algos:
                     self.reset_solver(event.text)
                 
                 # Reset maze generator
