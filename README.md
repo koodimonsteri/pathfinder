@@ -7,6 +7,7 @@ run pathfinder.py
 Solving algorithms implemented so far:  
 Astar  
 Dijkstra  
+Depth First Search  
   
 Maze generation algorithms implemented so far:  
 Prim's  
