@@ -95,7 +95,10 @@ class CellGrid:
 
     def drag_grid(self, drag):
         logger.info("Dragging! Mouse pos (%f %f) - rel (%f %f)", drag.mx, drag.my, drag.dx, drag.dy)
-
+        cx = self.camera.x + drag.dx
+        cy = self.camera.y + drag.dy
+        self.camera.x = cx
+        self.camera.y = cy
 
     # Update zoom level
     # Calculate new cell size and position
@@ -108,7 +111,6 @@ class CellGrid:
         #    c.w_x = c.x * c.size
         #    c.w_y = c.y * c.size
         logger.info("Mouse pos: (%d, %d), size: (%d), x_off: (%f), y_off: (%f) cur_zoom: (%f), zoom_upd (%f)", mx, my, self.camera.size, self.camera.x, self.camera.y, self.camera.current_zoom, zoom_in)
-
 
     # Notes
     # Modes:   1 = EDIT, 2 = SOLVE, 3 = GENERATE         <--- in pathfinder

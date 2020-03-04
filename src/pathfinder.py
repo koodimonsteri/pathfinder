@@ -14,7 +14,9 @@ from my_gui import *
 MAP_DIRECTORY = "../maps/"
 RES_DIRECTORY = "../res/"
 
-WINDOW_SIZE = 400
+# TODO: grid zooming and dragging
+# TODO: scalable window (?)
+
 GRID_SIZE = 400
 SIDEBAR_WIDTH = 200
 WINDOW_HEIGHT = GRID_SIZE
@@ -33,10 +35,10 @@ INSTANT = 2
 class Drag:
     def __init__(self):
         self.drag = False
-        self.mx = 0
-        self.my = 0
-        self.dx = 0
-        self.dy = 0
+        self.mx = 0.0
+        self.my = 0.0
+        self.dx = 0.0
+        self.dy = 0.0
 
     def update_drag(self, mx, my, dx, dy):
         if mx != self.mx and my != self.my:
@@ -44,16 +46,22 @@ class Drag:
             self.my = my
             self.dx = dx
             self.dy = dy
-
+        else:
+            self.mx = mx
+            self.my = my
+            self.dx = 0.0
+            self.dy = 0.0
+    
+    def __repr__(self):
+        return "Drag, mouse pos (%f, %f) rel (%f, %f)" % (self.mx, self.my, self.dx, self.dy)
 
 class MyGame:
     def __init__(self):
         pygame.init()
         self.gui_manager = pygame_gui.UIManager((WINDOW_WIDTH, WINDOW_HEIGHT), RES_DIRECTORY + "button_theme.json")
         self.grid_surface = pygame.Surface((GRID_SIZE, GRID_SIZE))
-        mrect = pygame.Rect(0, 0, 400, 400)
-        self.grid_surface.set_clip(mrect)
-        self.cell_grid = CellGrid(WINDOW_SIZE)
+        self.grid_surface.set_clip(pygame.Rect(0, 0, 400, 400))
+        self.cell_grid = CellGrid(GRID_SIZE)
         self.solver = Astar(self.cell_grid)
         self.maze_generator = PrimGenerator(self.cell_grid)
         self.my_gui = MyGui(self.gui_manager, GRID_SIZE, 0, SIDEBAR_WIDTH, WINDOW_HEIGHT)
@@ -148,6 +156,7 @@ class MyGame:
     def update(self, time_delta):
         if self.drag.drag:
             self.cell_grid.drag_grid(self.drag)
+            self.drag.update_drag(self.drag.mx, self.drag.my, 0.0, 0.0)
 
         elif self.current_mode == EDITOR:
             self.cell_grid.edit()
@@ -252,7 +261,6 @@ class MyGame:
             self.maze_generator.show(self.grid_surface)
 
         #sz = int(self.cell_grid.size * self.cell_grid.cell_size)
-        
         window.blit(self.grid_surface, (self.cell_grid.camera.x, self.cell_grid.camera.y))
         # At last draw gui and swap buffers
         self.my_gui.show(window)
@@ -311,7 +319,7 @@ def load(file_name):
         g_size = int(size_parts[0])
         c_size = int(size_parts[1])
         logger.debug("Grid size: %d Cell size: %d", g_size, c_size)
-        m_grid = CellGrid(WINDOW_SIZE, c_size)
+        m_grid = CellGrid(GRID_SIZE, c_size)
         x = 0
         y = 0
         for c in f.readline():
