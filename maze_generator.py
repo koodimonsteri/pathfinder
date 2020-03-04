@@ -4,6 +4,10 @@ from collections import deque
 
 from cell_grid import *
 
+###
+# TODO: move grid and some other generic stuff to base class
+###
+
 # Base abstact class for different generators
 class MazeGenerator:
     def __init__(self):
@@ -23,6 +27,7 @@ def get_cell_in_between(grid: CellGrid, c1, c2):
     x_off = int((c1.x - c2.x) / 2)
     y_off = int((c1.y - c2.y) / 2)
     return grid.get_cell(c2.x + x_off, c2.y + y_off)
+
 
 # Prim's algorithm
 class PrimGenerator(MazeGenerator):
@@ -70,16 +75,17 @@ class PrimGenerator(MazeGenerator):
                         if self.__grid.in_bounds(nbr.x, nbr.y, 1) and nbr not in self.__maze_todo and nbr not in self.__visited:
                             self.__maze_todo.add(nbr)
                     cell.type = FLOOR
-                    temp_x = int((rand_nbr.x - cell.x) / 2) # Grid position between current and new cell
-                    temp_y = int((rand_nbr.y - cell.y) / 2)
-                    self.__grid.get_cell(cell.x + temp_x, cell.y + temp_y).type = FLOOR
+                    # Set cell in between to floor
+                    get_cell_in_between(self.__grid, cell, rand_nbr).type = FLOOR
                     
             self.__maze_todo.remove(cell)
 
     # Generate maze in one go
     def generate_maze(self):
-        while len(self.__maze_todo) > 0:
-            self.generate_step()
+        if len(self.__maze_todo) > 0:
+            logger.info("Generating maze with Prim")
+            while len(self.__maze_todo) > 0:
+                self.generate_step()
 
 
 class RecBackTrackGenerator(MazeGenerator):
@@ -88,19 +94,18 @@ class RecBackTrackGenerator(MazeGenerator):
         self.__stack = deque()
         self.__stack_cib = deque()  # Only for rendering, holds cells in between
         self.__current_cell = self.__grid.start_cell
-        self.__grid.set_cell_type_forall(WALL)
-        self.__grid.start_cell.type = START
+        #self.__grid.set_cell_type_forall(WALL)
+        #self.__grid.start_cell.type = START
 
     def show(self, window):
         for c in self.__stack:
-            c.show(window, (0, 150, 50))
+            c.show(window,  (0, 150, 50))
         for c in self.__stack_cib:
             c.show(window, (0, 150, 50))
         self.__current_cell.show(window, (0, 200, 50))
 
     def generate_step(self):
         if len(self.__stack) > 0:
-            logger.info("Generating with recursive backtracker!")
             nbrs = self.__grid.get_neighbors(self.__current_cell.x, self.__current_cell.y, 2)
             nbrs = [x for x in nbrs if self.__grid.in_bounds(x.x, x.y, 1) and x.type == WALL]
             if len(nbrs) > 0:
@@ -117,8 +122,10 @@ class RecBackTrackGenerator(MazeGenerator):
                     self.__stack_cib.pop()
 
     def generate_maze(self):
-        while len(self.__stack) > 0:
-            self.generate_step()
+        if len(self.__stack) > 0:
+            logger.info("Generating maze with Recursive Backtracking")
+            while len(self.__stack) > 0:
+                self.generate_step()
 
     def reset(self, grid):
         self.__grid = grid
@@ -153,7 +160,7 @@ class WeirdPrimGenerator(MazeGenerator):
 
     def show(self, window):
         for c in self.__maze_todo:
-            c.show(window, (0,200, 40))
+            c.show(window, 1.0, (0,200, 40))
 
     def generate_step(self):
         if len(self.__maze_todo) > 0:

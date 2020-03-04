@@ -23,18 +23,35 @@ WINDOW_WIDTH = GRID_SIZE + SIDEBAR_WIDTH
 EDITOR = 0
 PATHFINDER = 1
 MAZEGENERATOR = 2
-REALTIME = 3
 
 # update_modes = ["Step", "Continous", "Instant"]
 STEP = 0
 CONTINOUS = 1
 INSTANT = 2
 
+class Drag:
+    def __init__(self):
+        self.drag = False
+        self.mx = 0
+        self.my = 0
+        self.dx = 0
+        self.dy = 0
+
+    def update_drag(self, mx, my, dx, dy):
+        if mx != self.mx and my != self.my:
+            self.mx = mx
+            self.my = my
+            self.dx = dx
+            self.dy = dy
+
 
 class MyGame:
     def __init__(self):
         pygame.init()
         self.gui_manager = pygame_gui.UIManager((WINDOW_WIDTH, WINDOW_HEIGHT), "button_theme.json")
+        self.grid_surface = pygame.Surface((GRID_SIZE, GRID_SIZE))
+        mrect = pygame.Rect(0, 0, 400, 400)
+        self.grid_surface.set_clip(mrect)
         self.cell_grid = CellGrid(WINDOW_SIZE)
         self.solver = Astar(self.cell_grid)
         self.maze_generator = PrimGenerator(self.cell_grid)
@@ -42,28 +59,57 @@ class MyGame:
         self.current_mode = EDITOR
         self.current_update_mode = CONTINOUS
         self.running = False
-        self.__mouse_click = False
-        
+        self.__step = False
+        self.drag = Drag()
+
     def process_events(self, event):
         if event.type == pygame.QUIT:
             self.running = False
-        
+
+        # Mouse events
         if event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == pygame.BUTTON_LEFT:
-                self.__mouse_click = True
+                if self.cell_grid.camera.in_bounds(event.pos[0], event.pos[1]):
+                    self.drag.drag = True
 
-        if event.type == pygame.USEREVENT:
-            # Check drop down changes
+            elif event.button == pygame.BUTTON_WHEELDOWN:
+                self.cell_grid.zoom_grid(False)
+
+            elif event.button == pygame.BUTTON_WHEELUP:
+                self.cell_grid.zoom_grid(True)
+
+        elif event.type == pygame.MOUSEBUTTONUP:
+            if event.button == pygame.BUTTON_LEFT:
+                self.drag.drag = False
+                self.drag.update_drag(0.0, 0.0, 0.0, 0.0)
+
+        elif event.type == pygame.MOUSEMOTION:
+            if self.drag.drag:
+                self.drag.update_drag(event.pos[0], event.pos[1], event.rel[0], event.rel[1])
+
+        # Keyboard events
+        elif event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_ESCAPE:
+                self.running = False
+            elif event.key == pygame.K_1:
+                self.set_mode(EDITOR)
+            elif event.key == pygame.K_2:
+                self.set_mode(PATHFINDER)
+            elif event.key == pygame.K_3:
+                self.set_mode(MAZEGENERATOR)
+            elif event.key == pygame.K_SPACE:
+                self.__step = True
+
+        # Pygame userevents
+        elif event.type == pygame.USEREVENT:
+            # Drop down changes
             if event.user_type == pygame_gui.UI_DROP_DOWN_MENU_CHANGED:
-                # Editor drop_down -> change mode
                 if event.text == modes[EDITOR]:
                     self.set_mode(EDITOR)
 
-                # Solver drop_down -> reset solver and change mode
                 elif event.text == modes[PATHFINDER]:
                     self.set_mode(PATHFINDER)
 
-                # Generator drop_down -> reset generator and change mode
                 elif event.text == modes[MAZEGENERATOR]:
                     self.set_mode(MAZEGENERATOR)
 
@@ -75,19 +121,16 @@ class MyGame:
                 elif event.text in maze_algos:
                     self.reset_maze_generator(event.text)
             
-            # Switch to step by step updating and reset solver
             elif event.ui_element.text == "STEP":
-                self.set_update_mode(0)
+                self.set_update_mode(STEP)
                 
-            # Switch to continous updating
             elif event.ui_element.text == "CONT":
-                self.set_update_mode(1)
+                self.set_update_mode(CONTINOUS)
 
-            # Switch to realtime updating
             elif event.ui_element.text == "INST":
-                self.set_update_mode(2)
+                self.set_update_mode(INSTANT)
 
-            # Set all cells to FLOOR
+            # Set all cells to FLOOR, retain start and end
             elif event.ui_element.text == "Clear":
                 self.cell_grid.set_cell_type_forall(FLOOR)
                 self.cell_grid.start_cell.type = START
@@ -105,56 +148,45 @@ class MyGame:
                 if cg != None:
                     self.cell_grid = cg
                 else:
-                    logger.info("Failed to load cell grid! %s", fname)
+                    logger.warn("Failed to load cell grid from file %s", fname)
         self.my_gui.process_events(event)
 
-    def handle_input(self):
-        keys = pygame.key.get_pressed()
-        #mkeys = pygame.mouse.get_
-        if keys[pygame.K_1]:
-            self.set_mode(EDITOR)
-        elif keys[pygame.K_2]:
-            self.set_mode(PATHFINDER)
-        elif keys[pygame.K_3]:
-            self.set_mode(MAZEGENERATOR)
-        
-        elif keys[pygame.K_ESCAPE]:
-            # If escaping set running to false
-            self.running = False
-
     # Update game based on mode
-    
     def update(self, time_delta):
-        if self.current_mode == EDITOR:
+        if self.drag.drag:
+            self.cell_grid.drag_grid(self.drag)
+
+        elif self.current_mode == EDITOR:
             self.cell_grid.edit()
+
         elif self.current_mode == PATHFINDER:
-            # Step by step mode -> check for mouse clicks in grid and solve 1 step if true
+            # Step by step mode -> check for step and solve 1 step
             if self.current_update_mode == STEP:
-                m_x, m_y = pygame.mouse.get_pos()
-                c_x, c_y = self.cell_grid.cell_index(m_x, m_y)
-                if self.__mouse_click and self.cell_grid.in_bounds(c_x, c_y):
+                if self.cell_grid.edit():
+                    self.solver.reset(self.cell_grid)
+                if self.__step:
                     self.solver.solve_step()
-                    self.__mouse_click = False
+                    self.__step = False
                 
             # Continous mode -> solve 1 step
             elif self.current_update_mode == CONTINOUS:
-                self.solver.solve_step()
+                if self.cell_grid.edit():
+                    self.solver.reset(self.cell_grid)
+                if not self.solver.solved:
+                    self.solver.solve_step()
             
-            # Instant mode -> check for mouse movement and in grid and reset and solve if true
-            elif self.current_update_mode == INSTANT and self.cell_grid.edit():
-                #if self.cell_grid.edit(): 
-                self.solver.reset(self.cell_grid)
-                self.solver.solve()
-            else:
-                self.solver.solve()
+            # Instant mode -> try to edit grid and reset and solve if true
+            elif self.current_update_mode == INSTANT:
+                if self.cell_grid.edit():
+                    self.solver.reset(self.cell_grid)
+                if not self.solver.solved:
+                    self.solver.solve()
+            
         elif self.current_mode == MAZEGENERATOR:
-            # Step by step mode -> check for mouse clicks in grid area and generate 1 step if true
-            if self.current_update_mode == STEP:
-                m_x, m_y = pygame.mouse.get_pos()
-                c_x, c_y = self.cell_grid.cell_index(m_x, m_y)
-                if self.__mouse_click and self.cell_grid.in_bounds(c_x, c_y):
-                    self.maze_generator.generate_step()
-                    self.__mouse_click = False
+            # Step by step mode -> check for step and generate 1 step
+            if self.current_update_mode == STEP and self.__step:
+                self.maze_generator.generate_step()
+                self.__step = False
 
             # Continous mode -> generate 1 step of maze
             elif self.current_update_mode == CONTINOUS:
@@ -174,6 +206,9 @@ class MyGame:
         elif alg == solve_algos[1]:
             self.solver = Dijkstra(self.cell_grid)
             self.solver.reset(self.cell_grid)
+        elif alg == solve_algos[2]:
+            self.solver = DFS(self.cell_grid)
+            self.solver.reset(self.cell_grid)
 
     # Reset maze generator
     def reset_maze_generator(self, alg):
@@ -184,12 +219,13 @@ class MyGame:
             self.maze_generator = RecBackTrackGenerator(self.cell_grid)
             self.maze_generator.reset(self.cell_grid)
 
-    # Reset solver/generator
+    # Set game mode EDITOR/SOLVER/GENERATOR
     def set_mode(self, mode):
         if mode == EDITOR:
             # Set editor mode and update gui
             self.current_mode = EDITOR
             self.my_gui.set_sidebar(EDITOR)
+            
         elif mode == PATHFINDER:
             # Set pathfinder mode, reset solver and update gui
             self.current_mode = PATHFINDER
@@ -202,6 +238,8 @@ class MyGame:
             self.reset_maze_generator(maze_algos[self.my_gui.current_maze_alg])
             self.my_gui.set_sidebar(MAZEGENERATOR)
         
+    # Set update mode STEP/CONT/INST
+    # Reset solver/generator if needed
     def set_update_mode(self, u_mode):
         self.current_update_mode = u_mode
         if self.current_mode == PATHFINDER:
@@ -210,17 +248,19 @@ class MyGame:
             self.maze_generator.reset(self.cell_grid)
 
     # Draw game
-    def render(self, window):
+    def show(self, window):
         window.fill((50, 50, 50))
         # Always draw grid
-        self.cell_grid.show(window)
+        self.cell_grid.show(self.grid_surface)##
         # Draw solver/generator based on mode
         if self.current_mode == PATHFINDER:
-            self.solver.show(window)
+            self.solver.show(self.grid_surface)
         elif self.current_mode == MAZEGENERATOR:
-            self.maze_generator.show(window)
-        elif self.current_mode == REALTIME:
-            self.solver.show(window)
+            self.maze_generator.show(self.grid_surface)
+
+        #sz = int(self.cell_grid.size * self.cell_grid.cell_size)
+        
+        window.blit(self.grid_surface, (self.cell_grid.camera.x, self.cell_grid.camera.y))
         # At last draw gui and swap buffers
         self.my_gui.show(window)
         pygame.display.flip()
@@ -242,14 +282,11 @@ class MyGame:
             for event in pygame.event.get():
                 self.process_events(event)
 
-            # Handle input
-            self.handle_input()
-
             # Update game
             self.update(time_delta)
 
             # Render game
-            self.render(window)
+            self.show(window)
 
             fps += 1
             if dt >= 1.0:

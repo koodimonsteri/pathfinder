@@ -41,7 +41,7 @@ class EditorWindow(UIWindow):
         info_offset_y = BOX_HEIGHT + MARGIN
         info_height = 120
         logger.info("myrect height %f", my_rect.height)
-        self.info_text = "<font size=2>Keys 1-3 to change mode<br>'S' to place start cell<br>'E' to place end cell<br>Right click to add Wall<br>Left click to remove Wall"
+        self.info_text = "<font size=2>Keys 1-3 to change mode<br>'W' to place wall<br>'F' to place floor<br>'S' to place start<br>'E' to place end<br>'SPACE' to step"
         self.info_text_box1 = UITextBox(self.info_text,
                                         relative_rect = pygame.Rect(0, info_offset_y, my_rect.width, info_height),
                                         manager = manager,
@@ -138,7 +138,6 @@ class CustomToggleBox(UIWindow):
                 b.select()
 
     def process_event(self, event):
-        #logger.info(event)
         if event.type == pygame.USEREVENT and event.user_type == pygame_gui.UI_BUTTON_PRESSED:
             if event.ui_element.text == "STEP":
                 self.set_mode(0)

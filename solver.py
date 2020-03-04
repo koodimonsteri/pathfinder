@@ -1,14 +1,19 @@
-from abc import ABC, abstractmethod
-from cell_grid import *
-
 import logging
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
+from abc import ABC, abstractmethod
 import math
 import heapq
+from collections import deque
+
+from cell_grid import *
 
 import pygame
+
+###
+# TODO: move some generic stuff (grid, etc.. ?) to base class
+###
 
 # Base abstract class for different path finding algorithms
 class PathFinder(ABC):
@@ -21,7 +26,7 @@ class PathFinder(ABC):
     def solve(self):
         raise NotImplementedError
 
-    def reset(self):
+    def reset(self, grid):
         raise NotImplementedError
 
     def show(self):
@@ -50,11 +55,12 @@ def diagonal_heur(x1, y1, x2, y2):
 # A* (A-star) path finding algorithm
 class Astar(PathFinder):
     def __init__(self, grid):
+        #super().__init__(grid)
         self.__grid = grid
         self.__openset = set()
-        self.__openset.add(grid.start_cell)
+        #self.__openset.add(grid.start_cell)
         self.__closedset = set()
-        self.solved = False
+        #self.solved = False
         self.__current_cell = grid.start_cell
 
     # Solve 1 step of astar
@@ -74,7 +80,6 @@ class Astar(PathFinder):
             f_lowest = 1000000
             d_lowest = 1000000
             for cell in self.__openset:
-                #temp_x, temp_y = self.__grid.cell_index(cell.x, cell.y)
                 if cell.f < f_lowest:  # Pick cell with lowest f cost
                     d_lowest = diagonal_heur(cell.x, cell.y, e_x, e_y)
                     c_lowest = cell
@@ -143,7 +148,7 @@ class Astar(PathFinder):
     def __reset_heuristics(self):
         for c in self.__grid:
             c.h = 0
-            c.g = 100000
+            c.g = 1000000
             c.f = 0
             c.previous = None
 
@@ -167,10 +172,11 @@ class Astar(PathFinder):
         for c in self.__closedset:
             c.show(window, (0, 100, 25))
         # And at last construct path and draw it in bright green
-        path = self.__grid.get_path(self.__current_cell)
-        for c in path:
-            c.show(window, (0, 200, 100))
-        self.__current_cell.show(window, (100, 250, 150))
+        if self.solved or len(self.__openset) > 0:
+            path = self.__grid.get_path(self.__current_cell)
+            for c in path:
+                c.show(window, (0, 200, 100))
+            self.__current_cell.show(window, (100, 250, 150))
 
 
 class Dijkstra(PathFinder):
@@ -178,10 +184,10 @@ class Dijkstra(PathFinder):
         self.__grid = grid
         self.__visited = set()
         self.__unvisited = []
-        self.reset(grid)
         self.__current_cell = self.__grid.start_cell
+        self.reset(grid)
         self.solved = False
-
+    
     def solve_step(self):
         if len(self.__unvisited) > 0 and not self.solved:
             if self.__current_cell == self.__grid.end_cell:
@@ -190,6 +196,7 @@ class Dijkstra(PathFinder):
                 return
             cur_g, cur_cell = heapq.heappop(self.__unvisited)
             self.__visited.add(cur_cell)
+            tempnbrs = []
             for dir_x, dir_y in [(1,0), (0,1), (-1,0), (0,-1)]:
                 n_x, n_y = (cur_cell.x + dir_x, cur_cell.y + dir_y)
                 if self.__grid.in_bounds(n_x, n_y):
@@ -197,6 +204,7 @@ class Dijkstra(PathFinder):
                     if c not in self.__visited and c.type != WALL:
                         # Update neighbor
                         self.__update_cell_heuristics(n_x, n_y, cur_g + 1.0, cur_cell)
+                        tempnbrs.append(c)
 
                         # Update adjacent diagonals
                         diag_g = 1.414213
@@ -205,17 +213,31 @@ class Dijkstra(PathFinder):
                             x2 = n_x + 1
                             if self.__grid.in_bounds(x1, n_y):
                                 self.__update_cell_heuristics(x1, n_y, cur_g + diag_g, cur_cell)
+                                c = self.__grid.get_cell(x1, n_y)
+                                if c not in tempnbrs:
+                                    tempnbrs.append(c)
                             if self.__grid.in_bounds(x2, n_y):
                                 self.__update_cell_heuristics(x2, n_y, cur_g + diag_g, cur_cell)
+                                c = self.__grid.get_cell(x2, n_y)
+                                if c not in tempnbrs:
+                                    tempnbrs.append(c)
                         elif dir_y == 0:
                             y1 = n_y - 1
                             y2 = n_y + 1
                             if self.__grid.in_bounds(n_x, y1):
                                 self.__update_cell_heuristics(n_x, y1, cur_g + diag_g, cur_cell)
+                                c = self.__grid.get_cell(n_x, y1)
+                                if c not in tempnbrs:
+                                    tempnbrs.append(c)
                             if self.__grid.in_bounds(n_x, y2):
                                 self.__update_cell_heuristics(n_x, y2, cur_g + diag_g, cur_cell)
+                                c = self.__grid.get_cell(n_x, y2)
+                                if c not in tempnbrs:
+                                    tempnbrs.append(c)
             # Update current cell and sort unvisited cells
             self.__current_cell = cur_cell
+            for nbr in tempnbrs:
+                self.__unvisited.append((nbr.g, nbr))
             self.__heapify_unvisited()
     
     def solve(self):
@@ -234,42 +256,76 @@ class Dijkstra(PathFinder):
         self.__unvisited = [(cell.g, cell) for c_g, cell in self.__unvisited if cell not in self.__visited]
         setattr(Cell, "__lt__", lambda self, other: self.g < other.g)
         heapq.heapify(self.__unvisited)
+    
+    def __reset_heuristics(self):
+        for c in self.__grid:
+            c.g = 100000
+            c.previous = None
+        self.__current_cell.g = 0
 
     def reset(self, grid):
         self.__grid = grid
-        self.__unvisited = []
+        self.__current_cell = grid.start_cell
         self.__visited = set()
-        nonwalls = self.__grid.get_cells(WALL, False)
-        self.__grid.start_cell.type = START
-        for c in nonwalls:
-            c.g = 100000
-            c.previous = None
-            if c.type == START:
-                c.g = 0
-            self.__unvisited.append((c.g, c))
-        setattr(Cell, "__lt__", lambda self, other: self.g < other.g)
-        heapq.heapify(self.__unvisited)
+        self.__unvisited = []
+        self.__reset_heuristics()
+        self.__unvisited.append((self.__current_cell.g, self.__current_cell))
+        self.__heapify_unvisited()
         self.solved = False
-        
         
     def show(self, window):
         for c in self.__visited:
             c.show(window, (0, 150, 40))
-        path = self.__grid.get_path(self.__current_cell)
+        #if self.solved or len(self.__unvisited) > 0:
+        path = self.__grid.get_path(self.__current_cell)        
         for c in path:
             c.show(window, (0, 250, 100))
-
 
 # Dummy class for Depth First Search
 class DFS(PathFinder):
     def __init__(self, grid):
         self.__grid = grid
+        self.solved = False
+        self.__stack = deque()
+        self.__visited = set()
+        self.__current_cell = None
 
     def solve_step(self):
-        pass
+        if not self.solved and len(self.__stack) > 0:
+            
+            c = self.__stack.pop()
+            self.__visited.add(c)
+            self.__current_cell = c
+            nbrs = self.__grid.get_neighbors(c.x, c.y)
+            nbrs = [x for x in nbrs if x not in self.__visited and x.type != WALL]
+            for nbr in nbrs:
+                self.__stack.append(nbr)
+                nbr.previous = self.__current_cell
 
-    def reset(self):
-        pass
+            if self.__current_cell == self.__grid.end_cell:
+                logger.info("Found path with Dijkstra! length: %d", len(self.__grid.get_path(self.__current_cell)))
+                self.solved = True
+            
+    def solve(self):
+        while not self.solved and len(self.__stack) > 0:
+            self.solve_step()
 
-    def show(self):
-        pass
+    def reset(self, grid):
+        self.__grid = grid
+        for c in grid:
+            c.previous = None
+        self.__visited = set()
+        self.__stack = deque()
+        self.__current_cell = None
+        self.__stack.append(self.__grid.start_cell)
+        self.solved = False
+
+    def show(self, window):
+        for c in self.__visited:
+            c.show(window, (0, 150, 30))
+        for c in self.__stack:
+            c.show(window, (0, 200, 40))
+        if self.__current_cell != None:
+            path = self.__grid.get_path(self.__current_cell)
+            for c in path:
+                c.show(window, (0, 250, 50))

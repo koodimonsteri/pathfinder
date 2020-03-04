@@ -5,6 +5,8 @@ logging.basicConfig(level=logging.INFO)
 
 import pygame
 
+from camera import *
+
 WALL = 0
 FLOOR = 1
 START = 2
@@ -29,7 +31,11 @@ class Cell:
             color = c_color
         else:
             color = (0, 0, 0) if self.type == WALL else (50, 200, 200) if self.type == FLOOR else (40, 150, 40) if self.type == START else (20, 250, 20) if self.type == END else (200, 50, 50)
-        pygame.draw.rect(window, color, pygame.Rect(self.w_x, self.w_y, self.size, self.size))
+        msz = self.size
+        mx = self.w_x
+        my = self.w_y
+        #logger.info("Cell (%f, %f) size: %f", mx, my, msz)
+        pygame.draw.rect(window, color, pygame.Rect(mx, my, msz, msz))
         #g_str = "{0:.3f}".format(self.g)
         #mfont = pygame.font.Font(pygame.font.get_default_font(), 8)
         #text_surface = mfont.render(g_str, True, (0, 0, 0))
@@ -45,6 +51,8 @@ class CellGrid:
         self.start_cell.type = START
         self.end_cell = self.get_cell(self.size-2, self.size-2)
         self.end_cell.type = END
+        self.camera = GridCamera(0, 0, window_size)
+        
 
     # Iterator for CellGrid
     def __iter__(self):
@@ -58,42 +66,82 @@ class CellGrid:
         m_x, m_y = pygame.mouse.get_pos()
         c_x, c_y = self.cell_index(m_x, m_y)
         res = False
-        if self.in_bounds(c_x, c_y):
+        if self.camera.in_bounds(m_x, m_y):
             
-            logger.debug("m_x: %f m_y: %f Cell Position: (%d, %d)", m_x, m_y, c_x, c_y)
             keys_pressed = pygame.key.get_pressed()
-            mouse_pressed = pygame.mouse.get_pressed()
             
             if keys_pressed[pygame.K_s]:
-                s_x, s_y = (self.start_cell.x, self.start_cell.y)
-                self.set_cell_type(s_x, s_y, FLOOR)
-                self.start_cell = self.get_cell(c_x, c_y)
                 self.set_cell_type(c_x, c_y, START)
-                logger.debug("Moved END cell from (%d, %d) --> (%d, %d)", s_x, s_y, c_x, c_y)
+                logger.debug("Set START cell to (%d, %d)", c_x, c_y)
                 res = True
             elif keys_pressed[pygame.K_e]:
-                e_x, e_y = (self.end_cell.x, self.end_cell.y)
-                self.set_cell_type(e_x, e_y, FLOOR)
-                self.end_cell = self.get_cell(c_x, c_y)
                 self.set_cell_type(c_x, c_y, END)
-                logger.debug("Moved END cell from (%d, %d) --> (%d, %d)", e_x, e_y, c_x, c_y)
+                logger.debug("Set END cell to (%d, %d)", c_x, c_y)
                 res = True
-            elif mouse_pressed[0]:
+            elif keys_pressed[pygame.K_w]:
                 self.set_cell_type(c_x, c_y, WALL)
                 logger.debug("Edit cell (%d, %d) type to WALL", c_x, c_y)
                 res = True
-            elif mouse_pressed[2]:
+            elif keys_pressed[pygame.K_f]:
                 self.set_cell_type(c_x, c_y, FLOOR)
                 logger.debug("Edit cell (%d, %d) type to WALL", c_x, c_y)
                 res = True
-            
+
         return res
+
+    def drag_grid(self, drag):
+        logger.info("Dragging grid, %f %f - %f %f", drag.mx, drag.my, drag.dx, drag.dy)
+
+
+    # Update zoom level
+    # Calculate new cell size and position
+    def zoom_grid(self, zoom_in):
+        #zoom = min(20.0, max(1.0, self.current_zoom + zoom_update))
+        mx, my = pygame.mouse.get_pos()
+        self.camera.zoom(mx, my, zoom_in)
+        for c in self:
+            c.size = int(self.cell_size * self.camera.current_zoom)
+            c.w_x = c.x * c.size
+            c.w_y = c.y * c.size
+        logger.info("Mouse pos: (%d, %d), size: (%d), x_off: (%f), y_off: (%f) cur_zoom: (%f), zoom_upd (%f)", mx, my, self.camera.size, self.camera.x, self.camera.y, self.camera.current_zoom, zoom_in)
+
+
+    # Notes
+    # Modes:   1 = EDIT, 2 = SOLVE, 3 = GENERATE         <--- in pathfinder
+    # Cells:   (all modes) ( w = WALL, f = FLOOR, s = START, e = END ) + left click    <--- in pathfinder -> edit grid
+    # Updates:
+    # (solve/generate in step mode)space = STEP SOLVE,
+    # (all)scroll = ZOOM GRID,
+    # (all)left click = DRAG GRID
+    #
 
     # Draw CellGrid cells
     def show(self, window):
-        for cell_row in self.__cell_grid:
-            for cell in cell_row:
-                cell.show(window)
+        #logger.info("Zoom update: %f", self.zoom_update)
+        #news = int(self.cell_size * self.current_zoom + self.cell_size * self.zoom_update)
+        msurface = pygame.Surface((self.size * self.cell_size, self.size * self.cell_size))
+        news = self.cell_size
+        #neww = int(news * self.size * self.current_zoom)
+        #newh = int(news * self.size * self.current_zoom)
+        for cell in self:
+            #cell.show(window, self.current_zoom)
+            if cell.type == WALL:
+                color = (0, 0, 0)
+            elif cell.type == FLOOR:
+                color = (50, 200, 200) 
+            elif cell.type == START:
+                color = (150, 20, 20)
+            elif cell.type == END:
+                color = (20, 250, 20) 
+            else:
+                color = (200, 50, 50)
+            cell.show(window, color)
+            #mx = cell.x * news + self.x_off
+            #my = cell.y * news + self.y_off# * self.cell_size
+            #pygame.draw.rect(msurface, color, pygame.Rect(cell.x, cell.y, 1.0, 1.0))
+        #logger.info("neww: %d newh: %d", neww, newh)
+        wsx, wsy = window.get_size()
+        #window = pygame.transform.scale(msurface, (int(wsx * self.current_zoom), int(wsy * self.current_zoom)), window)
 
     # Check if x and y are in bounds of CellGrid
     # Optional in_off parameter for maze generation
@@ -105,7 +153,10 @@ class CellGrid:
 
     # Returns grid indices from mouse position
     def cell_index(self, m_x, m_y):
-        return (int(m_x / self.cell_size), int(m_y / self.cell_size))
+        c_x = int(m_x / self.cell_size)
+        c_y = int(m_y / self.cell_size)
+        #logger.debug("Calling cell_index: mx, my (%f, %f) cx, cy (%d, %d)", m_x, m_y, c_x, c_y)
+        return (c_x, c_y)
 
         # Helper function to reconstruct path from current cell
     def get_path(self, current_cell):
@@ -148,7 +199,18 @@ class CellGrid:
 
     # Set cell type
     def set_cell_type(self, x, y, c_type):
-        self.__cell_grid[y][x].type = c_type
+        if c_type == START:
+            s_x, s_y = (self.start_cell.x, self.start_cell.y)
+            self.__cell_grid[s_y][s_x].type = FLOOR
+            self.start_cell = self.get_cell(x, y)
+            self.__cell_grid[y][x].type = START
+        elif c_type == END:
+            e_x, e_y = (self.end_cell.x, self.end_cell.y)
+            self.__cell_grid[e_y][e_x].type = FLOOR
+            self.end_cell = self.get_cell(x, y)
+            self.__cell_grid[y][x].type = END
+        else:
+            self.__cell_grid[y][x].type = c_type
     
     # Get cell type
     def get_cell_type(self, x, y):
