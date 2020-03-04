@@ -4,10 +4,6 @@ from collections import deque
 
 from cell_grid import *
 
-###
-# TODO: move grid and some other generic stuff to base class
-###
-
 # Base abstact class for different generators
 class MazeGenerator:
     def __init__(self):

@@ -97,8 +97,11 @@ class CellGrid:
         logger.info("Dragging! Mouse pos (%f %f) - rel (%f %f)", drag.mx, drag.my, drag.dx, drag.dy)
         cx = self.camera.x + drag.dx
         cy = self.camera.y + drag.dy
-        self.camera.x = cx
-        self.camera.y = cy
+        # Handle x and y separate to allow sliding
+        if cx >= 0.0 and cx + self.camera.width < 400.0:
+            self.camera.x = cx
+        if cy >= 0.0 and cy + self.camera.height < 400.0:
+            self.camera.y = cy
 
     # Update zoom level
     # Calculate new cell size and position
