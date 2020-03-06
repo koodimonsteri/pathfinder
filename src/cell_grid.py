@@ -31,11 +31,17 @@ class Cell:
     def show(self, window, c_color=None):
         if c_color != None:
             color = c_color
-        else:
-            color = (0, 0, 0) if self.type == WALL else (50, 200, 200) if self.type == FLOOR else (40, 150, 40) if self.type == START else (20, 250, 20) if self.type == END else (200, 50, 50)
-        msz = self.size
-        mx = self.w_x
-        my = self.w_y
+        elif self.type == WALL:
+            color = (0, 0, 0)
+        elif self.type == FLOOR:
+            color = (50, 180, 180)
+        elif self.type == START:
+            color = (200, 40, 40)
+        elif self.type == END:
+            color = (40, 250, 40)
+        msz = 1
+        mx = self.x
+        my = self.y
         #logger.info("Cell (%f, %f) size: %f", mx, my, msz)
         pygame.draw.rect(window, color, pygame.Rect(mx, my, msz, msz))
         #g_str = "{0:.3f}".format(self.g)
@@ -56,7 +62,7 @@ class CellGrid:
         self.end_cell = self.get_cell(self.size-2, self.size-2)
         self.end_cell.type = END
         self.camera = GridCamera(0, 0, window_size)
-        
+        self.surface = pygame.Surface((self.size, self.size))
 
     # Iterator for CellGrid
     def __iter__(self):
@@ -93,10 +99,11 @@ class CellGrid:
         
         return res
 
-    def drag_grid(self, drag):
-        logger.info("Dragging! Mouse pos (%f %f) - rel (%f %f)", drag.mx, drag.my, drag.dx, drag.dy)
-        cx = self.camera.x + drag.dx
-        cy = self.camera.y + drag.dy
+    def drag_grid(self):
+        mdrag = self.camera.c_drag
+        logger.info("Dragging! Mouse pos (%f %f) - rel (%f %f)", mdrag.mx, mdrag.my, mdrag.dx, mdrag.dy)
+        cx = self.camera.x + mdrag.dx
+        cy = self.camera.y + mdrag.dy
         # Handle x and y separate to allow sliding
         if cx >= 0.0 and cx + self.camera.width < 400.0:
             self.camera.x = cx
@@ -106,50 +113,25 @@ class CellGrid:
     # Update zoom level
     # Calculate new cell size and position
     def zoom_grid(self, zoom_in):
-        #zoom = min(20.0, max(1.0, self.current_zoom + zoom_update))
         mx, my = pygame.mouse.get_pos()
         #self.camera.zoom(mx, my, zoom_in)
-        #for c in self:
-        #    c.size = int(self.cell_size * self.camera.current_zoom)
-        #    c.w_x = c.x * c.size
-        #    c.w_y = c.y * c.size
-        logger.info("Mouse pos: (%d, %d), size: (%d), x_off: (%f), y_off: (%f) cur_zoom: (%f), zoom_upd (%f)", mx, my, self.camera.size, self.camera.x, self.camera.y, self.camera.current_zoom, zoom_in)
+        zf = self.camera.zoom_f if zoom_in else 1.0 / self.camera.zoom_f
+        dx = (mx - self.camera.x) * zf
+        dy = (my - self.camera.y) * zf
 
-    # Notes
-    # Modes:   1 = EDIT, 2 = SOLVE, 3 = GENERATE         <--- in pathfinder
-    # Cells:   (EDITOR/SOLVER) ( w = WALL, f = FLOOR, s = START, e = END )    <--- in pathfinder
-    # Updates:
-    # (solve/generate in step mode)space = STEP SOLVE,
-    # (all)scroll = ZOOM GRID,
-    # (all)left click = DRAG GRID
+        logger.info("Mouse pos: (%d, %d), size: (%d), x_off: (%f), y_off: (%f) cur_zoom: (%f), zoom_upd (%f)", mx, my, self.camera.size, self.camera.x, self.camera.y, self.camera.current_zoom, zoom_in)
+        logger.info("dx dy (%f, %f)", dx, dy)
 
     # Draw CellGrid cells
     def show(self, window):
-        #logger.info("Zoom update: %f", self.zoom_update)
-        #news = int(self.cell_size * self.current_zoom + self.cell_size * self.zoom_update)
-        msurface = pygame.Surface((self.size * self.cell_size, self.size * self.cell_size))
-        news = self.cell_size
-        #neww = int(news * self.size * self.current_zoom)
-        #newh = int(news * self.size * self.current_zoom)
         for cell in self:
-            #cell.show(window, self.current_zoom)
-            if cell.type == WALL:
-                color = (0, 0, 0)
-            elif cell.type == FLOOR:
-                color = (50, 200, 200) 
-            elif cell.type == START:
-                color = (150, 20, 20)
-            elif cell.type == END:
-                color = (20, 250, 20) 
-            else:
-                color = (200, 50, 50)
-            cell.show(window, color)
-            #mx = cell.x * news + self.x_off
-            #my = cell.y * news + self.y_off# * self.cell_size
-            #pygame.draw.rect(msurface, color, pygame.Rect(cell.x, cell.y, 1.0, 1.0))
-        #logger.info("neww: %d newh: %d", neww, newh)
-        wsx, wsy = window.get_size()
-        #window = pygame.transform.scale(msurface, (int(wsx * self.current_zoom), int(wsy * self.current_zoom)), window)
+            cell.show(window)
+
+    # Takes an arbitrary list of cells and color and renders them all
+    def show_cells(self, cells, color):
+        for c in cells:
+            c.show(self.surface, color)
+        
 
     # Check if x and y are in bounds of CellGrid
     # Optional in_off parameter for maze generation
@@ -230,3 +212,6 @@ class CellGrid:
             for c in c_row:
                 c.type = c_type
                     
+    def update_drag(self, mx, my, dx, dy):
+        self.camera.c_drag.update_drag(mx, my, dx, dy)
+    

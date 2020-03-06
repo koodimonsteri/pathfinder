@@ -58,12 +58,10 @@ def octile_heur(x1, y1, x2, y2):
 # A* (A-star) path finding algorithm
 class Astar(PathFinder):
     def __init__(self, grid):
-        #super().__init__(grid)
         self.__grid = grid
         self.__openset = set()
-        #self.__openset.add(grid.start_cell)
         self.__closedset = set()
-        #self.solved = False
+        self.solved = False
         self.__current_cell = grid.start_cell
 
     # Solve 1 step of astar

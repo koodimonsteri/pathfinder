@@ -23,6 +23,7 @@ BOX_HEIGHT = 40
 # Container y offset
 
 modes = ["Editor", "Pathfinder", "Mazegenerator"]
+mode_key_str = [" (1)", " (2)", " (3)"]
 solve_algos = ["Astar", "Dijkstra", "DFS"]
 maze_algos = ["Prim's", "RecursiveBackTrack", "Divide & Conquer"]
 update_modes = ["Step", "Continous", "Instant"]
@@ -157,7 +158,7 @@ class MyGui:
         self.update_mode_boxes = CustomToggleBox(self.sidebar_container, manager)
         self.mode_window_rect = pygame.Rect(x + MARGIN, y + (BOX_HEIGHT * 2) + (MARGIN * 3), width - (MARGIN * 2), height - (MARGIN * 4) - (BOX_HEIGHT * 2))
         self.current_side_bar = EditorWindow(self.mode_window_rect, self.gui_manager)
-        self.mode_text_box = UITextBox(modes[0],
+        self.mode_text_box = UITextBox(modes[0] + mode_key_str[0],
                                     pygame.Rect(MARGIN, MARGIN, width - (2 * MARGIN), BOX_HEIGHT),
                                     manager = self.gui_manager,
                                     container=self.sidebar_container)
@@ -169,18 +170,17 @@ class MyGui:
     def set_sidebar(self, newmode):
         self.current_side_bar.kill()
         if newmode == 0:
-            self.mode_text_box.html_text = modes[newmode]
+            self.mode_text_box.html_text = modes[newmode] + mode_key_str[newmode]
             self.mode_text_box.rebuild()
             self.current_side_bar = EditorWindow(self.mode_window_rect, self.gui_manager)
         elif newmode == 1:
-            self.mode_text_box.html_text = modes[newmode]
+            self.mode_text_box.html_text = modes[newmode] + mode_key_str[newmode]
             self.mode_text_box.rebuild()
             self.current_side_bar = SolverWindow(self.mode_window_rect, self.gui_manager, self.current_solve_alg)         
         elif newmode == 2:
-            self.mode_text_box.html_text = modes[newmode]
+            self.mode_text_box.html_text = modes[newmode] + mode_key_str[newmode]
             self.mode_text_box.rebuild()
             self.current_side_bar = GeneratorWindow(self.mode_window_rect, self.gui_manager, self.current_maze_alg)
-                   
         
     def process_events(self, event):
         if event.type == pygame.USEREVENT and event.user_type == pygame_gui.UI_DROP_DOWN_MENU_CHANGED:

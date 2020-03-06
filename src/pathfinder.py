@@ -32,29 +32,6 @@ STEP = 0
 CONTINOUS = 1
 INSTANT = 2
 
-class Drag:
-    def __init__(self):
-        self.drag = False
-        self.mx = 0.0
-        self.my = 0.0
-        self.dx = 0.0
-        self.dy = 0.0
-
-    def update_drag(self, mx, my, dx, dy):
-        if mx != self.mx and my != self.my:
-            self.mx = mx
-            self.my = my
-            self.dx = dx
-            self.dy = dy
-        else:
-            self.mx = mx
-            self.my = my
-            self.dx = 0.0
-            self.dy = 0.0
-    
-    def __repr__(self):
-        return "Drag, mouse pos (%f, %f) rel (%f, %f)" % (self.mx, self.my, self.dx, self.dy)
-
 class MyGame:
     def __init__(self):
         pygame.init()
@@ -69,7 +46,6 @@ class MyGame:
         self.current_update_mode = CONTINOUS
         self.running = False
         self.__step = False
-        self.drag = Drag()
 
     def process_events(self, event):
         if event.type == pygame.QUIT:
@@ -79,7 +55,7 @@ class MyGame:
         if event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == pygame.BUTTON_LEFT:
                 if self.cell_grid.camera.in_bounds(event.pos[0], event.pos[1]):
-                    self.drag.drag = True
+                    self.cell_grid.camera.dragging = True
 
             elif event.button == pygame.BUTTON_WHEELDOWN:
                 self.cell_grid.zoom_grid(False)
@@ -89,12 +65,12 @@ class MyGame:
 
         elif event.type == pygame.MOUSEBUTTONUP:
             if event.button == pygame.BUTTON_LEFT:
-                self.drag.drag = False
-                self.drag.update_drag(0.0, 0.0, 0.0, 0.0)
+                self.cell_grid.camera.dragging = False
+                self.cell_grid.update_drag(0.0, 0.0, 0.0, 0.0)
 
         elif event.type == pygame.MOUSEMOTION:
-            if self.drag.drag:
-                self.drag.update_drag(event.pos[0], event.pos[1], event.rel[0], event.rel[1])
+            if self.cell_grid.camera.dragging:
+                self.cell_grid.update_drag(event.pos[0], event.pos[1], event.rel[0], event.rel[1])
 
         # Keyboard events
         elif event.type == pygame.KEYDOWN:
@@ -154,9 +130,11 @@ class MyGame:
 
     # Update game based on mode
     def update(self, time_delta):
-        if self.drag.drag:
-            self.cell_grid.drag_grid(self.drag)
-            self.drag.update_drag(self.drag.mx, self.drag.my, 0.0, 0.0)
+        if self.cell_grid.camera.dragging:
+            self.cell_grid.drag_grid()
+            self.cell_grid.update_drag(self.cell_grid.camera.c_drag.mx,
+                                        self.cell_grid.camera.c_drag.my,
+                                        0.0, 0.0)
 
         elif self.current_mode == EDITOR:
             self.cell_grid.edit()
@@ -256,14 +234,22 @@ class MyGame:
     def show(self, window):
         window.fill((50, 50, 50))
         # Always draw grid
-        self.cell_grid.show(self.grid_surface)##
+        grid_surf = pygame.Surface((self.cell_grid.size, self.cell_grid.size))
+        self.cell_grid.show(grid_surf)##
         # Draw solver/generator based on mode
         if self.current_mode == PATHFINDER:
-            self.solver.show(self.grid_surface)
+            self.solver.show(grid_surf)
+            self.cell_grid.start_cell.show(grid_surf)
+            self.cell_grid.end_cell.show(grid_surf)
         elif self.current_mode == MAZEGENERATOR:
-            self.maze_generator.show(self.grid_surface)
+            self.maze_generator.show(grid_surf)
 
-        #sz = int(self.cell_grid.size * self.cell_grid.cell_size)
+        # Scale and blit to window size
+        pygame.transform.scale(grid_surf, (GRID_SIZE, GRID_SIZE), self.grid_surface)
+        window.blit(self.grid_surface, (0, 0))
+
+        # Scale and blit by zoom
+
         window.blit(self.grid_surface, (self.cell_grid.camera.x, self.cell_grid.camera.y))
         # At last draw gui and swap buffers
         self.my_gui.show(window)
