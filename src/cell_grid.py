@@ -127,12 +127,6 @@ class CellGrid:
         for cell in self:
             cell.show(window)
 
-    # Takes an arbitrary list of cells and color and renders them all
-    def show_cells(self, cells, color):
-        for c in cells:
-            c.show(self.surface, color)
-        
-
     # Check if x and y are in bounds of CellGrid
     # Optional in_off parameter for maze generation
     def in_bounds(self, x, y, in_off=0):
