@@ -11,10 +11,6 @@ from cell_grid import *
 
 import pygame
 
-###
-# TODO: move some generic stuff (grid, etc.. ?) to base class
-###
-
 # Base abstract class for different path finding algorithms
 class PathFinder(ABC):
     def __init__(self):

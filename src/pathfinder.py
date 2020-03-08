@@ -199,7 +199,10 @@ class MyGame:
             self.maze_generator = PrimGenerator(self.cell_grid)
             self.maze_generator.reset(self.cell_grid)
         if alg == maze_algos[1]:
-            self.maze_generator = RecBackTrackGenerator(self.cell_grid)
+            self.maze_generator = BackTrackGenerator(self.cell_grid)
+            self.maze_generator.reset(self.cell_grid)
+        if alg == maze_algos[2]:
+            self.maze_generator = DNQGenerator(self.cell_grid)
             self.maze_generator.reset(self.cell_grid)
 
     # Set game mode EDITOR/SOLVER/GENERATOR

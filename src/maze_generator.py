@@ -1,6 +1,7 @@
 from abc import ABC, abstractclassmethod
 import random
 from collections import deque
+from queue import Queue
 
 from cell_grid import *
 
@@ -16,6 +17,9 @@ class MazeGenerator:
         raise NotImplementedError
 
     def generate_step(self):
+        raise NotImplementedError
+    
+    def generate_maze(self):
         raise NotImplementedError
 
 
@@ -84,14 +88,12 @@ class PrimGenerator(MazeGenerator):
                 self.generate_step()
 
 
-class RecBackTrackGenerator(MazeGenerator):
+class BackTrackGenerator(MazeGenerator):
     def __init__(self, grid):
         self.__grid = grid
         self.__stack = deque()
         self.__stack_cib = deque()  # Only for rendering, holds cells in between
         self.__current_cell = self.__grid.start_cell
-        #self.__grid.set_cell_type_forall(WALL)
-        #self.__grid.start_cell.type = START
 
     def show(self, window):
         for c in self.__stack:
@@ -133,20 +135,97 @@ class RecBackTrackGenerator(MazeGenerator):
         self.__grid.set_cell_type_forall(WALL)
         self.__current_cell.type = FLOOR
 
-# Dummy class for Divide and Conquer algorithm
+# Divide and Conquer algorithm
 class DNQGenerator(MazeGenerator):
     def __init__(self, grid):
         self.__grid = grid
+        self.__que = deque()
+        self.__generated = False
+        self.__current_pos = None
 
-    def show(self):
-        pass
+    def show(self, surface):
+        if not self.__generated and self.__current_pos:
+            for c in self.__get_cells(self.__current_pos[0], self.__current_pos[1]):
+                c.show(surface, (0, 150, 40))
+
+    def __get_cells(self, pos1, pos2):
+        res = []
+        if pos1[0] == pos2[0]:
+            for i in range(pos1[1], pos2[1]):
+                res.append(self.__grid.get_cell(pos1[0], i))
+        else:
+            for i in range(pos1[0], pos2[0]):
+                res.append(self.__grid.get_cell(i, pos1[1]))
+        return res
+
+    # Returns 2 areas
+    def __divide(self, x, y, w, h, horizontal):
+
+        mx = x + (0 if horizontal else random.randint(1, w - 2))
+        my = y + (random.randint(1, h - 2) if horizontal else 0)
+
+        if not horizontal:
+            mx -= mx % 2
+        else:
+            my -= my % 2
+        first = (mx, my)
+
+        dx = 1 if horizontal else 0
+        dy = 0 if horizontal else 1
+        n = w if horizontal else h
+
+        fx = mx + (random.randrange(0, w, 2) if horizontal else 0)
+        fy = my + (0 if horizontal else random.randrange(0, h, 2))
+
+        for i in range(0, n):
+            self.__grid.get_cell(mx, my).type = WALL
+            mx += dx
+            my += dy
+        self.__grid.get_cell(fx, fy).type = FLOOR
+
+        nx, ny = (x, my + 1) if horizontal else (mx + 1, y)
+        nw, nh = (w, y + h - my - 1) if horizontal else (x + w - mx - 1, h)
+        if nw > 2 and nh > 2:
+            self.__que.append((nx, ny, nw, nh))
+        logger.debug("nxy2 (%d, %d) nwh(%d, %d)", nx, ny, nw, nh)
+
+        nx, ny = (x, y)
+        nw, nh = (w, my - y) if horizontal else (mx - x , h)
+        if nw > 2 and nh > 2:
+            self.__que.append((nx, ny, nw, nh))
+        logger.debug("nxy1 (%d, %d) nwh(%d, %d)", nx, ny, nw, nh)
+
+        if len(self.__que) == 0:
+            logger.info("Generated maze!")
+            self.__generated = True
+            self.__current_pos = None
+        else:
+            self.__current_pos = (first, (mx, my))
 
     def generate_step(self):
-        pass
+        if not self.__generated and len(self.__que) > 0:
+            x, y, w, h = self.__que.pop()
+            horizontal = True if w < h else False if w > h else random.choice([True, False])
+            
+            self.__divide(x, y, w, h, horizontal)
 
-    def reset(self):
-        pass
+    def generate_maze(self):
+        while not self.__generated and len(self.__que) > 0:
+            self.generate_step() 
 
+    def reset(self, grid):
+        self.__grid = grid
+        self.__que = deque()
+        self.__grid.set_cell_type_forall(FLOOR)
+        # Set edges to WALL
+        for i in range(0, self.__grid.size):
+            self.__grid.set_cell_type(i, 0, WALL)
+            self.__grid.set_cell_type(0, i, WALL)
+            self.__grid.set_cell_type(self.__grid.size - 1, i, WALL)
+            self.__grid.set_cell_type(i, self.__grid.size - 1, WALL)
+        self.__que.append((1, 1, self.__grid.size-2, self.__grid.size-2))
+        self.__generated = False
+        self.__current_pos = None
 
 class WeirdPrimGenerator(MazeGenerator):
 

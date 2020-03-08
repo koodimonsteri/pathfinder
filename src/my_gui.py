@@ -25,7 +25,7 @@ BOX_HEIGHT = 40
 modes = ["Editor", "Pathfinder", "Mazegenerator"]
 mode_key_str = [" (1)", " (2)", " (3)"]
 solve_algos = ["Astar", "Dijkstra", "DFS"]
-maze_algos = ["Prim's", "RecursiveBackTrack", "Divide & Conquer"]
+maze_algos = ["Prim's", "BackTracker", "Divide & Conquer"]
 update_modes = ["Step", "Continous", "Instant"]
 
 # Editor window which contains essential information and save/load functionality

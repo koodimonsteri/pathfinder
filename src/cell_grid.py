@@ -64,7 +64,6 @@ class CellGrid:
         self.camera = GridCamera(0, 0, window_size)
         self.surface = pygame.Surface((self.size, self.size))
 
-    # Iterator for CellGrid
     def __iter__(self):
         for j in range(0, self.size):
             for i in range(0, self.size):
@@ -110,8 +109,6 @@ class CellGrid:
         if cy >= 0.0 and cy + self.camera.height < 400.0:
             self.camera.y = cy
 
-    # Update zoom level
-    # Calculate new cell size and position
     def zoom_grid(self, zoom_in):
         mx, my = pygame.mouse.get_pos()
         #self.camera.zoom(mx, my, zoom_in)
