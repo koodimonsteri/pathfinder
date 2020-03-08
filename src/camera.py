@@ -11,17 +11,22 @@ class GridCamera:
         self.zoom_f = 0.9
         self.dragging = False
         self.c_drag = Drag()
+        self.current_scale = 1
 
     def zoom(self, mx, my, zoom_in):
         if self.in_bounds(mx, my):
-            z = self.zoom_f if zoom_in else -self.zoom_f
+            ts = int(self.current_scale + (1 if zoom_in else -1))
+            ts = max(1, min(10, ts))
+            self.current_scale = ts
+            '''z = self.zoom_f if zoom_in else -self.zoom_f
             self.current_zoom += z
             tx = self.x + (mx / 2)
             ty = self.y + (my / 2)
             self.x -= mx * z
             self.y -= mx * z
             self.width = self.size * (1-z)
-            self.height = self.size * (1-z)
+            self.height = self.size * (1-z)'''
+    
     
     def drag(self, mx, my, d):
         pass

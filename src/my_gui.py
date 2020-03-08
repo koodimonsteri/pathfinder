@@ -25,7 +25,7 @@ BOX_HEIGHT = 40
 modes = ["Editor", "Pathfinder", "Mazegenerator"]
 mode_key_str = [" (1)", " (2)", " (3)"]
 solve_algos = ["Astar", "Dijkstra", "DFS"]
-maze_algos = ["Prim's", "BackTracker", "Divide & Conquer", "HuntAndKill"]
+maze_algos = ["Prim's", "BackTracker", "Divide & Conquer", "HuntAndKill", "Binary Tree"]
 update_modes = ["Step", "Continous", "Instant"]
 
 # Editor window which contains essential information and save/load functionality
@@ -199,5 +199,3 @@ class MyGui:
     # Crashes if called when not in editormode :)
     def get_fname_text(self):
         return self.current_side_bar.fname_text_box.get_text()
-
-

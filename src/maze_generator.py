@@ -253,7 +253,7 @@ class HuntAndKill(MazeGenerator):
             self.__current_cell.show(surface, (20, 250, 40))
 
     def __hunt_new_current(self):
-        for j in range(1, self.__grid.size-1, 2):
+        for j in range(self.__cur_y, self.__grid.size-1, 2):
             for i in range(1, self.__grid.size-1, 2):
                 c = self.__grid.get_cell(i, j)
                 if c not in self.__visited:
@@ -284,8 +284,8 @@ class HuntAndKill(MazeGenerator):
                 self.__current_cell = r_nbr
             else:
                 self.__visited.add(self.__current_cell)
-                logger.info("NO NEIGHBORS")
                 self.__current_cell = None
+
         elif not self.__generated:
             # Hunt new current
             c = self.__hunt_new_current()
@@ -297,3 +297,22 @@ class HuntAndKill(MazeGenerator):
         while not self.__generated:
             self.generate_step()
 
+
+class BinaryTree(MazeGenerator):
+    def __init__(self):
+        self.__grid = None
+        self.__current_cell = None
+
+    def reset(self, grid):
+        self.__grid = grid
+        self.__current_cell = self.__grid.get_cell(1, 1)
+
+    def show(self, surface):
+        if self.__current_cell:
+            self.__current_cell.show(surface, (0, 250, 50))
+
+    def generate_step(self):
+        pass
+    
+    def generate_maze(self):
+        pass

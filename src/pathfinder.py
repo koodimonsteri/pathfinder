@@ -208,6 +208,9 @@ class MyGame:
         if alg == maze_algos[3]:
             self.maze_generator = HuntAndKill()
             self.maze_generator.reset(self.cell_grid)
+        if alg == maze_algos[4]:
+            self.maze_generator = BinaryTree()
+            self.maze_generator.reset(self.cell_grid)
 
     # Set game mode EDITOR/SOLVER/GENERATOR
     def set_mode(self, mode):
@@ -252,12 +255,12 @@ class MyGame:
             self.maze_generator.show(grid_surf)
 
         # Scale and blit to window size
-        pygame.transform.scale(grid_surf, (GRID_SIZE, GRID_SIZE), self.grid_surface)
-        window.blit(self.grid_surface, (0, 0))
+        news = self.cell_grid.camera.current_scale * GRID_SIZE
+        tsurf = pygame.Surface((news, news))
+        pygame.transform.scale(grid_surf, (news, news), tsurf)
 
-        # Scale and blit by zoom
+        window.blit(tsurf, (self.cell_grid.camera.x, self.cell_grid.camera.y),(0,0,400,400))
 
-        window.blit(self.grid_surface, (self.cell_grid.camera.x, self.cell_grid.camera.y))
         # At last draw gui and swap buffers
         self.my_gui.show(window)
         pygame.display.flip()

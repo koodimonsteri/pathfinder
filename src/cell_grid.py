@@ -118,6 +118,7 @@ class CellGrid:
 
         logger.info("Mouse pos: (%d, %d), size: (%d), x_off: (%f), y_off: (%f) cur_zoom: (%f), zoom_upd (%f)", mx, my, self.camera.size, self.camera.x, self.camera.y, self.camera.current_zoom, zoom_in)
         logger.info("dx dy (%f, %f)", dx, dy)
+        self.camera.zoom(mx, my, zoom_in)
 
     # Draw CellGrid cells
     def show(self, window):
