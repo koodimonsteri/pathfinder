@@ -40,7 +40,8 @@ class MyGame:
         self.grid_surface.set_clip(pygame.Rect(0, 0, 400, 400))
         self.cell_grid = CellGrid(GRID_SIZE)
         self.solver = Astar(self.cell_grid)
-        self.maze_generator = PrimGenerator(self.cell_grid)
+        self.maze_generator = PrimGenerator()
+        self.reset_maze_generator(self.cell_grid)
         self.my_gui = MyGui(self.gui_manager, GRID_SIZE, 0, SIDEBAR_WIDTH, WINDOW_HEIGHT)
         self.current_mode = EDITOR
         self.current_update_mode = CONTINOUS
@@ -196,13 +197,16 @@ class MyGame:
     # Reset maze generator
     def reset_maze_generator(self, alg):
         if alg == maze_algos[0]:
-            self.maze_generator = PrimGenerator(self.cell_grid)
+            self.maze_generator = PrimGenerator()
             self.maze_generator.reset(self.cell_grid)
         if alg == maze_algos[1]:
-            self.maze_generator = BackTrackGenerator(self.cell_grid)
+            self.maze_generator = BackTrackGenerator()
             self.maze_generator.reset(self.cell_grid)
         if alg == maze_algos[2]:
-            self.maze_generator = DNQGenerator(self.cell_grid)
+            self.maze_generator = DNQGenerator()
+            self.maze_generator.reset(self.cell_grid)
+        if alg == maze_algos[3]:
+            self.maze_generator = HuntAndKill()
             self.maze_generator.reset(self.cell_grid)
 
     # Set game mode EDITOR/SOLVER/GENERATOR

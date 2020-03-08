@@ -31,8 +31,8 @@ def get_cell_in_between(grid: CellGrid, c1, c2):
 
 # Prim's algorithm
 class PrimGenerator(MazeGenerator):
-    def __init__(self, grid):
-        self.__grid = grid
+    def __init__(self):
+        self.__grid = None
         self.__maze_todo = set()
         self.__visited = set()
 
@@ -89,18 +89,19 @@ class PrimGenerator(MazeGenerator):
 
 
 class BackTrackGenerator(MazeGenerator):
-    def __init__(self, grid):
-        self.__grid = grid
+    def __init__(self):
+        self.__grid = None
         self.__stack = deque()
         self.__stack_cib = deque()  # Only for rendering, holds cells in between
-        self.__current_cell = self.__grid.start_cell
+        self.__current_cell = None
 
     def show(self, window):
         for c in self.__stack:
             c.show(window,  (0, 150, 50))
         for c in self.__stack_cib:
             c.show(window, (0, 150, 50))
-        self.__current_cell.show(window, (0, 200, 50))
+        if self.__current_cell:
+            self.__current_cell.show(window, (0, 200, 50))
 
     def generate_step(self):
         if len(self.__stack) > 0:
@@ -137,8 +138,8 @@ class BackTrackGenerator(MazeGenerator):
 
 # Divide and Conquer algorithm
 class DNQGenerator(MazeGenerator):
-    def __init__(self, grid):
-        self.__grid = grid
+    def __init__(self):
+        self.__grid = None
         self.__que = deque()
         self.__generated = False
         self.__current_pos = None
@@ -158,7 +159,6 @@ class DNQGenerator(MazeGenerator):
                 res.append(self.__grid.get_cell(i, pos1[1]))
         return res
 
-    # Returns 2 areas
     def __divide(self, x, y, w, h, horizontal):
 
         mx = x + (0 if horizontal else random.randint(1, w - 2))
@@ -206,7 +206,6 @@ class DNQGenerator(MazeGenerator):
         if not self.__generated and len(self.__que) > 0:
             x, y, w, h = self.__que.pop()
             horizontal = True if w < h else False if w > h else random.choice([True, False])
-            
             self.__divide(x, y, w, h, horizontal)
 
     def generate_maze(self):
@@ -227,46 +226,24 @@ class DNQGenerator(MazeGenerator):
         self.__generated = False
         self.__current_pos = None
 
-class WeirdPrimGenerator(MazeGenerator):
 
-    def __init__(self, grid):
-        self.__grid = grid
-        self.__maze_todo = set()
-
-    def show(self, window):
-        for c in self.__maze_todo:
-            c.show(window, 1.0, (0,200, 40))
-
-    def generate_step(self):
-        if len(self.__maze_todo) > 0:
-            # Get random cell from todo set
-            cell = random.choice(list(self.__maze_todo))
-            #logger.info("Random Cell (%d, %d)", cell.x, cell.y)
-            c_x, c_y = (cell.x, cell.y)
-
-            # Get neighbors around our current cell
-            nbrs = self.__grid.get_neighbors(c_x, c_y)
-            wall_count = 0
-            for n in nbrs:
-                if n not in self.__maze_todo and n.type == WALL:
-                    wall_count += 1
-            # If there is exactly 3 walls, add neighbors to todo set and clear current
-            if wall_count == 3:
-                for n in nbrs:
-                    if n not in self.__maze_todo:
-                        self.__maze_todo.add(n)
-                cell.type = FLOOR
-            self.__maze_todo.remove(cell)
-
+class HuntAndKill(MazeGenerator):
+    def __init__(self):
+        self.__grid = None
+        self.__current_cell = None
+        self.__visited = set()
 
     def reset(self, grid):
         self.__grid = grid
-        self.__maze_todo = set()
-        self.__grid.set_cell_type_forall(WALL)
-        # Get first cell by random
-        cell = self.__grid.get_cell(random.randint(1, self.__grid.size-1), random.randint(1, self.__grid.size-1))
-        cell.type = FLOOR
-        # Get neighbors of the first cell and add them to todo set
-        c_x, c_y = self.__grid.cell_index(cell.x, cell.y)
-        for c in self.__grid.get_neighbors(c_x, c_y):
-            self.__maze_todo.add(c)
+        self.__visited = set()
+        self.__current_cell = self.__grid.get_cell(1, 1)
+
+    def show(self, surface):
+        pass
+
+    def generate_step(self):
+        pass
+    
+    def generate_maze(self):
+        pass
+
