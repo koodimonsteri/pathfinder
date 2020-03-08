@@ -53,12 +53,12 @@ def octile_heur(x1, y1, x2, y2):
 
 # A* (A-star) path finding algorithm
 class Astar(PathFinder):
-    def __init__(self, grid):
-        self.__grid = grid
+    def __init__(self):
+        self.__grid = None
         self.__openset = set()
         self.__closedset = set()
         self.solved = False
-        self.__current_cell = grid.start_cell
+        self.__current_cell = None
 
     # Solve 1 step of astar
     def solve_step(self):
@@ -154,8 +154,8 @@ class Astar(PathFinder):
             c.previous = None
 
     # Reset astar solving
-    def reset(self, maze):
-        self.__grid = maze
+    def reset(self, grid):
+        self.__grid = grid
         self.__openset = set()
         self.__openset.add(self.__grid.start_cell)
         self.__closedset = set()
@@ -181,12 +181,12 @@ class Astar(PathFinder):
 
 
 class Dijkstra(PathFinder):
-    def __init__(self, grid):
-        self.__grid = grid
+    def __init__(self):
+        self.__grid = None
         self.__visited = set()
         self.__unvisited = []
-        self.__current_cell = self.__grid.start_cell
-        self.reset(grid)
+        self.__current_cell = None
+        #self.reset(grid)
         self.solved = False
     
     def solve_step(self):
@@ -287,12 +287,12 @@ class Dijkstra(PathFinder):
 
 # Depth First Search
 class DFS(PathFinder):
-    def __init__(self, grid):
-        self.__grid = grid
-        self.solved = False
+    def __init__(self):
+        self.__grid = None
         self.__stack = deque()
         self.__visited = set()
         self.__current_cell = None
+        self.solved = False
 
     def solve_step(self):
         if not self.solved and len(self.__stack) > 0:

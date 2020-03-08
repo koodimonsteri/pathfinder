@@ -39,9 +39,8 @@ class MyGame:
         self.grid_surface = pygame.Surface((GRID_SIZE, GRID_SIZE))
         self.grid_surface.set_clip(pygame.Rect(0, 0, 400, 400))
         self.cell_grid = CellGrid(GRID_SIZE)
-        self.solver = Astar(self.cell_grid)
-        self.maze_generator = PrimGenerator()
-        self.reset_maze_generator(self.cell_grid)
+        self.solver = None
+        self.maze_generator = None
         self.my_gui = MyGui(self.gui_manager, GRID_SIZE, 0, SIDEBAR_WIDTH, WINDOW_HEIGHT)
         self.current_mode = EDITOR
         self.current_update_mode = CONTINOUS
@@ -185,13 +184,13 @@ class MyGame:
     # Reset solver algorithm
     def reset_solver(self, alg):
         if alg == solve_algos[0]:
-            self.solver = Astar(self.cell_grid)
+            self.solver = Astar()
             self.solver.reset(self.cell_grid)
         elif alg == solve_algos[1]:
-            self.solver = Dijkstra(self.cell_grid)
+            self.solver = Dijkstra()
             self.solver.reset(self.cell_grid)
         elif alg == solve_algos[2]:
-            self.solver = DFS(self.cell_grid)
+            self.solver = DFS()
             self.solver.reset(self.cell_grid)
 
     # Reset maze generator
