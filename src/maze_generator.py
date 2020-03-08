@@ -230,20 +230,70 @@ class DNQGenerator(MazeGenerator):
 class HuntAndKill(MazeGenerator):
     def __init__(self):
         self.__grid = None
-        self.__current_cell = None
         self.__visited = set()
+        self.__current_cell = None
+        self.__generate = False
+        self.__cur_y = 1
 
     def reset(self, grid):
         self.__grid = grid
         self.__visited = set()
         self.__current_cell = self.__grid.get_cell(1, 1)
+        self.__grid.set_cell_type_forall(WALL)
+        self.__current_cell.type = FLOOR
+        self.__generated = False
+        self.__cur_y = 1
 
     def show(self, surface):
-        pass
+        if not self.__generated and self.__current_cell == None:
+            for i in range(1, self.__grid.size-2):
+                c = self.__grid.get_cell(i, self.__cur_y)
+                c.show(surface, (0, 180, 50))
+        if self.__current_cell != None:
+            self.__current_cell.show(surface, (20, 250, 40))
 
+    def __hunt_new_current(self):
+        for j in range(1, self.__grid.size-1, 2):
+            for i in range(1, self.__grid.size-1, 2):
+                c = self.__grid.get_cell(i, j)
+                if c not in self.__visited:
+                    nbrs = self.__grid.get_neighbors(i, j, 2)
+                    nbrs = [c for c in nbrs if c in self.__visited]
+                    if len(nbrs) > 0:
+                        r_nbr = nbrs[random.randint(0, len(nbrs)-1)]
+                        c.type = FLOOR
+                        get_cell_in_between(self.__grid, r_nbr, c).type = FLOOR
+                        self.__current_cell = c
+                        self.__cur_y = j
+                        return c
+        return None
+
+    # Random walk
+    # or Hunt next spot
     def generate_step(self):
-        pass
+        if self.__current_cell != None:
+            nbrs = self.__grid.get_neighbors(self.__current_cell.x, self.__current_cell.y, 2)
+            nbrs = [c for c in nbrs if c not in self.__visited and c.type == WALL and self.__grid.in_bounds(c.x, c.y, 1)]
+
+            if len(nbrs) > 0:
+                # Random walk
+                r_nbr = nbrs[random.randint(0, len(nbrs)-1)]
+                r_nbr.type = FLOOR
+                get_cell_in_between(self.__grid, self.__current_cell, r_nbr).type = FLOOR
+                self.__visited.add(self.__current_cell)
+                self.__current_cell = r_nbr
+            else:
+                self.__visited.add(self.__current_cell)
+                logger.info("NO NEIGHBORS")
+                self.__current_cell = None
+        elif not self.__generated:
+            # Hunt new current
+            c = self.__hunt_new_current()
+            if c == None:
+                logger.info("Generated maze with Hunt and Kill!")
+                self.__generated = True
     
     def generate_maze(self):
-        pass
+        while not self.__generated:
+            self.generate_step()
 
