@@ -12,3 +12,4 @@ Depth First Search
 Maze generation algorithms implemented so far:  
 Prim's  
 Recursive Backtracking  
+Divide & Conquer  
