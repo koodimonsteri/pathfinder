@@ -51,7 +51,7 @@ class Cell:
 class CellGrid:
     def __init__(self, window_size, c_size=10):
         self.cell_size = c_size
-        self.size = 80#int(window_size / self.cell_size)
+        self.size = int(window_size / self.cell_size)
         self.__cell_grid = [[Cell(x, y, self.cell_size, FLOOR) for x in range(0, self.size)] for y in range(0, self.size)]
         self.start_cell = self.get_cell(1, 1)
         self.start_cell.type = START
@@ -72,8 +72,7 @@ class CellGrid:
         c_x, c_y = self.cell_index(m_x, m_y)
         res = None
         if self.camera.in_bounds(m_x, m_y):
-            #c_x, c_y = self.camera.gridtoscr(m_x, m_y)
-            #logger.info("mxy (%d, %d) cxy (%d, %d)", m_x, m_y, c_x, c_y)
+            #logger.info("m_xy (%d, %d) cxy (%d, %d)", m_x, m_y, c_x, c_y)
             keys_pressed = pygame.key.get_pressed()
             
             if keys_pressed[pygame.K_s]:
@@ -107,21 +106,21 @@ class CellGrid:
     def drag_grid(self):
         cx = self.camera.x - self.camera.drag_x
         cy = self.camera.y - self.camera.drag_y
-        logger.info("Dragging grid! cxy (%f, %f) dxy (%f, %f)", cx, cy, self.camera.drag_x, self.camera.drag_y)
         self.camera.x = cx
         self.camera.y = cy
         self.__clip_camera()
+        logger.info("Dragging grid - nxy (%f, %f) dxy (%f, %f)", cx, cy, self.camera.drag_x, self.camera.drag_y)
         self.camera.drag_x = 0
         self.camera.drag_y = 0
 
     def zoom_grid(self, mx, my, zoom_in):
         self.camera.zoom(mx, my, zoom_in)
-        logger.info("Mouse pos: (%d, %d), size: (%d), x_off: (%f), y_off: (%f) cur_scale: (%f), zoom_upd (%f)",
+        self.__clip_camera()
+        logger.debug("Zooming grid - Mouse pos: (%d, %d), size: (%d), x_off: (%f), y_off: (%f) cur_scale: (%f), zoom_upd (%f)",
                     mx, my, self.camera.width,
                     self.camera.x, self.camera.y,
                     self.camera.current_scale,
                     zoom_in)
-        self.__clip_camera()
     
     
     # Draw CellGrid cells

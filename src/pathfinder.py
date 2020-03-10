@@ -68,11 +68,11 @@ class MyGame:
         elif event.type == pygame.MOUSEBUTTONUP:
             if event.button == pygame.BUTTON_LEFT:
                 self.cell_grid.camera.dragging = False
-                self.cell_grid.camera.update_drag(0.0, 0.0, 0.0, 0.0)
+                self.cell_grid.camera.update_drag(0.0, 0.0)
 
         elif event.type == pygame.MOUSEMOTION:
             if self.cell_grid.camera.dragging:
-                self.cell_grid.camera.update_drag(event.pos[0], event.pos[1], event.rel[0], event.rel[1])
+                self.cell_grid.camera.update_drag(event.rel[0], event.rel[1])
 
         # Keyboard events
         elif event.type == pygame.KEYDOWN:
