@@ -18,8 +18,6 @@ class Cell:
     def __init__(self, x, y, size, c_type=FLOOR):
         self.x = x
         self.y = y
-        self.w_x = x * size  # Window x and y for rendering
-        self.w_y = y * size
         self.size = size
         self.type = c_type
         self.f = 0
@@ -39,11 +37,9 @@ class Cell:
             color = (200, 40, 40)
         elif self.type == END:
             color = (40, 250, 40)
-        msz = 1
-        mx = self.x
-        my = self.y
+        
         #logger.info("Cell (%f, %f) size: %f", mx, my, msz)
-        pygame.draw.rect(window, color, pygame.Rect(mx, my, msz, msz))
+        pygame.draw.rect(window, color, pygame.Rect(self.x * self.size, self.y*self.size, self.size, self.size))
         #g_str = "{0:.3f}".format(self.g)
         #mfont = pygame.font.Font(pygame.font.get_default_font(), 8)
         #text_surface = mfont.render(g_str, True, (0, 0, 0))
@@ -53,9 +49,9 @@ class Cell:
         return "Cell (%d, %d), type: %s" % (self.x, self.y, cell_types[self.type])
 
 class CellGrid:
-    def __init__(self, window_size, c_size=5):
+    def __init__(self, window_size, c_size=10):
         self.cell_size = c_size
-        self.size = int(window_size / self.cell_size)
+        self.size = 80#int(window_size / self.cell_size)
         self.__cell_grid = [[Cell(x, y, self.cell_size, FLOOR) for x in range(0, self.size)] for y in range(0, self.size)]
         self.start_cell = self.get_cell(1, 1)
         self.start_cell.type = START
@@ -76,7 +72,8 @@ class CellGrid:
         c_x, c_y = self.cell_index(m_x, m_y)
         res = None
         if self.camera.in_bounds(m_x, m_y):
-            
+            #c_x, c_y = self.camera.gridtoscr(m_x, m_y)
+            #logger.info("mxy (%d, %d) cxy (%d, %d)", m_x, m_y, c_x, c_y)
             keys_pressed = pygame.key.get_pressed()
             
             if keys_pressed[pygame.K_s]:
@@ -98,28 +95,35 @@ class CellGrid:
         
         return res
 
+    # Should be called after every zoom/drag operation
+    def __clip_camera(self):
+        s = self.size * self.cell_size * self.camera.current_scale
+        # TODO: variable width/height instead of constant
+        newx = min(s - 400, max(0, self.camera.x))
+        newy = min(s - 400, max(0, self.camera.y))
+        self.camera.x = newx
+        self.camera.y = newy
+
     def drag_grid(self):
-        mdrag = self.camera.c_drag
-        logger.info("Dragging! Mouse pos (%f %f) - rel (%f %f)", mdrag.mx, mdrag.my, mdrag.dx, mdrag.dy)
-        cx = self.camera.x + mdrag.dx
-        cy = self.camera.y + mdrag.dy
-        # Handle x and y separate to allow sliding
-        if cx >= 0.0 and cx + self.camera.width < 400.0:
-            self.camera.x = cx
-        if cy >= 0.0 and cy + self.camera.height < 400.0:
-            self.camera.y = cy
+        cx = self.camera.x - self.camera.drag_x
+        cy = self.camera.y - self.camera.drag_y
+        logger.info("Dragging grid! cxy (%f, %f) dxy (%f, %f)", cx, cy, self.camera.drag_x, self.camera.drag_y)
+        self.camera.x = cx
+        self.camera.y = cy
+        self.__clip_camera()
+        self.camera.drag_x = 0
+        self.camera.drag_y = 0
 
-    def zoom_grid(self, zoom_in):
-        mx, my = pygame.mouse.get_pos()
-        #self.camera.zoom(mx, my, zoom_in)
-        zf = self.camera.zoom_f if zoom_in else 1.0 / self.camera.zoom_f
-        dx = (mx - self.camera.x) * zf
-        dy = (my - self.camera.y) * zf
-
-        logger.info("Mouse pos: (%d, %d), size: (%d), x_off: (%f), y_off: (%f) cur_zoom: (%f), zoom_upd (%f)", mx, my, self.camera.size, self.camera.x, self.camera.y, self.camera.current_zoom, zoom_in)
-        logger.info("dx dy (%f, %f)", dx, dy)
+    def zoom_grid(self, mx, my, zoom_in):
         self.camera.zoom(mx, my, zoom_in)
-
+        logger.info("Mouse pos: (%d, %d), size: (%d), x_off: (%f), y_off: (%f) cur_scale: (%f), zoom_upd (%f)",
+                    mx, my, self.camera.width,
+                    self.camera.x, self.camera.y,
+                    self.camera.current_scale,
+                    zoom_in)
+        self.__clip_camera()
+    
+    
     # Draw CellGrid cells
     def show(self, window):
         for cell in self:
@@ -135,6 +139,7 @@ class CellGrid:
 
     # Returns grid indices from mouse position
     def cell_index(self, m_x, m_y):
+        m_x, m_y = self.camera.screen_to_grid(m_x, m_y)
         c_x = int(m_x / self.cell_size)
         c_y = int(m_y / self.cell_size)
         #logger.debug("Calling cell_index: mx, my (%f, %f) cx, cy (%d, %d)", m_x, m_y, c_x, c_y)
@@ -204,6 +209,4 @@ class CellGrid:
             for c in c_row:
                 c.type = c_type
                     
-    def update_drag(self, mx, my, dx, dy):
-        self.camera.c_drag.update_drag(mx, my, dx, dy)
     

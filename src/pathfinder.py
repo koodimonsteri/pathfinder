@@ -58,19 +58,21 @@ class MyGame:
                     self.cell_grid.camera.dragging = True
 
             elif event.button == pygame.BUTTON_WHEELDOWN:
-                self.cell_grid.zoom_grid(False)
+                self.cell_grid.zoom_grid(event.pos[0], event.pos[1], False)
 
             elif event.button == pygame.BUTTON_WHEELUP:
-                self.cell_grid.zoom_grid(True)
+                self.cell_grid.zoom_grid(event.pos[0], event.pos[1], True)
+            
+    
 
         elif event.type == pygame.MOUSEBUTTONUP:
             if event.button == pygame.BUTTON_LEFT:
                 self.cell_grid.camera.dragging = False
-                self.cell_grid.update_drag(0.0, 0.0, 0.0, 0.0)
+                self.cell_grid.camera.update_drag(0.0, 0.0, 0.0, 0.0)
 
         elif event.type == pygame.MOUSEMOTION:
             if self.cell_grid.camera.dragging:
-                self.cell_grid.update_drag(event.pos[0], event.pos[1], event.rel[0], event.rel[1])
+                self.cell_grid.camera.update_drag(event.pos[0], event.pos[1], event.rel[0], event.rel[1])
 
         # Keyboard events
         elif event.type == pygame.KEYDOWN:
@@ -132,9 +134,6 @@ class MyGame:
     def update(self, time_delta):
         if self.cell_grid.camera.dragging:
             self.cell_grid.drag_grid()
-            self.cell_grid.update_drag(self.cell_grid.camera.c_drag.mx,
-                                        self.cell_grid.camera.c_drag.my,
-                                        0.0, 0.0)
 
         elif self.current_mode == EDITOR:
             self.cell_grid.edit()
@@ -243,7 +242,8 @@ class MyGame:
     def show(self, window):
         window.fill((50, 50, 50))
         # Always draw grid
-        grid_surf = pygame.Surface((self.cell_grid.size, self.cell_grid.size))
+        cs = self.cell_grid.size * self.cell_grid.cell_size
+        grid_surf = pygame.Surface((cs, cs))
         self.cell_grid.show(grid_surf)##
         # Draw solver/generator based on mode
         if self.current_mode == PATHFINDER:
@@ -254,11 +254,11 @@ class MyGame:
             self.maze_generator.show(grid_surf)
 
         # Scale and blit to window size
-        news = self.cell_grid.camera.current_scale * GRID_SIZE
+        cam = self.cell_grid.camera
+        news = cam.current_scale * cs
         tsurf = pygame.Surface((news, news))
         pygame.transform.scale(grid_surf, (news, news), tsurf)
-
-        window.blit(tsurf, (self.cell_grid.camera.x, self.cell_grid.camera.y),(0,0,400,400))
+        window.blit(tsurf, (0, 0), (cam.x, cam.y, 400, 400))
 
         # At last draw gui and swap buffers
         self.my_gui.show(window)

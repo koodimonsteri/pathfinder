@@ -287,7 +287,6 @@ class HuntAndKill(MazeGenerator):
                 self.__current_cell = None
 
         elif not self.__generated:
-            # Hunt new current
             c = self.__hunt_new_current()
             if c == None:
                 logger.info("Generated maze with Hunt and Kill!")
@@ -302,17 +301,50 @@ class BinaryTree(MazeGenerator):
     def __init__(self):
         self.__grid = None
         self.__current_cell = None
+        self.__dirs = [(1, -1), (1, 1), (-1, 1), (-1, -1)] # NE, SE, SW, NW
+        self.__cd_idx = 0 # Current index in __dirs
+        self.__generated = False
 
     def reset(self, grid):
         self.__grid = grid
+        self.__grid.set_cell_type_forall(WALL)
         self.__current_cell = self.__grid.get_cell(1, 1)
+        self.__generated = False
 
     def show(self, surface):
         if self.__current_cell:
             self.__current_cell.show(surface, (0, 250, 50))
 
     def generate_step(self):
-        pass
-    
+        if not self.__generated:
+            nx = self.__current_cell.x + 2
+            ny = self.__current_cell.y
+            if nx > self.__grid.size - 2:
+                nx = 1
+                ny += 2
+            if ny > self.__grid.size - 2:
+                logger.info("Generated maze with Binary Tree!")
+                self.__current_cell = None
+                self.__generated = True
+                return
+                
+            c = self.__grid.get_cell(nx, ny)
+
+            dirs = [(self.__dirs[self.__cd_idx][0], 0), (0, self.__dirs[self.__cd_idx][1])]
+            cells = [self.__grid.get_cell(nx + x[0], ny + x[1]) for x in dirs if self.__grid.in_bounds(nx + x[0], ny + x[1], 1)]
+
+            if len(cells) > 0:
+                rc = cells[random.randint(0, len(cells) - 1)]
+                rc.type = FLOOR
+                get_cell_in_between(self.__grid, rc, c).type = FLOOR
+
+            self.__current_cell = c
+
     def generate_maze(self):
-        pass
+        while not self.__generated:
+            self.generate_step()
+
+    # Set
+    def set_direction(self, dir):
+        self.__cd_idx = dir
+        self.reset(self.__grid)

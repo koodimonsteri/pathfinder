@@ -11,6 +11,9 @@ from cell_grid import *
 
 import pygame
 
+# TODO: Optional diagonals
+# TODO: modifiable DFS search directions
+
 # Base abstract class for different path finding algorithms
 class PathFinder(ABC):
     def __init__(self):
