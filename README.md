@@ -14,3 +14,5 @@ Prim's
 Recursive Backtracking  
 Divide & Conquer  
 Hunt and Kill  
+Binary Tree  
+  
