@@ -189,7 +189,6 @@ class Dijkstra(PathFinder):
         self.__visited = set()
         self.__unvisited = []
         self.__current_cell = None
-        #self.reset(grid)
         self.solved = False
     
     def solve_step(self):
@@ -204,11 +203,11 @@ class Dijkstra(PathFinder):
             for dir_x, dir_y in [(1,0), (0,1), (-1,0), (0,-1)]:
                 n_x, n_y = (cur_cell.x + dir_x, cur_cell.y + dir_y)
                 if self.__grid.in_bounds(n_x, n_y):
-                    c = self.__grid.get_cell(n_x, n_y)
-                    if c not in self.__visited and c.type != WALL:
+                    nc = self.__grid.get_cell(n_x, n_y)
+                    if nc not in self.__visited and nc.type != WALL:
                         # Update neighbor
                         self.__update_cell_heuristics(n_x, n_y, cur_g + 1.0, cur_cell)
-                        tempnbrs.append(c)
+                        tempnbrs.append(nc)
 
                         # Update adjacent diagonals
                         diag_g = 1.414213
@@ -218,12 +217,12 @@ class Dijkstra(PathFinder):
                             if self.__grid.in_bounds(x1, n_y):
                                 self.__update_cell_heuristics(x1, n_y, cur_g + diag_g, cur_cell)
                                 c = self.__grid.get_cell(x1, n_y)
-                                if c not in tempnbrs:
+                                if c not in tempnbrs and c not in self.__visited and c.type != WALL:
                                     tempnbrs.append(c)
                             if self.__grid.in_bounds(x2, n_y):
                                 self.__update_cell_heuristics(x2, n_y, cur_g + diag_g, cur_cell)
                                 c = self.__grid.get_cell(x2, n_y)
-                                if c not in tempnbrs:
+                                if c not in tempnbrs and c not in self.__visited and c.type != WALL:
                                     tempnbrs.append(c)
                         elif dir_y == 0:
                             y1 = n_y - 1
@@ -231,12 +230,12 @@ class Dijkstra(PathFinder):
                             if self.__grid.in_bounds(n_x, y1):
                                 self.__update_cell_heuristics(n_x, y1, cur_g + diag_g, cur_cell)
                                 c = self.__grid.get_cell(n_x, y1)
-                                if c not in tempnbrs:
+                                if c not in tempnbrs and c not in self.__visited and c.type != WALL:
                                     tempnbrs.append(c)
                             if self.__grid.in_bounds(n_x, y2):
                                 self.__update_cell_heuristics(n_x, y2, cur_g + diag_g, cur_cell)
                                 c = self.__grid.get_cell(n_x, y2)
-                                if c not in tempnbrs:
+                                if c not in tempnbrs and c not in self.__visited and c.type != WALL:
                                     tempnbrs.append(c)
             # Update current cell and sort unvisited cells
             self.__current_cell = cur_cell
@@ -283,10 +282,10 @@ class Dijkstra(PathFinder):
     def show(self, window):
         for c in self.__visited:
             c.show(window, (0, 150, 40))
-        #if self.solved or len(self.__unvisited) > 0:
-        path = self.__grid.get_path(self.__current_cell)        
-        for c in path:
-            c.show(window, (0, 250, 100))
+        if self.solved or len(self.__unvisited) > 0:
+            path = self.__grid.get_path(self.__current_cell)        
+            for c in path:
+                c.show(window, (0, 200, 100))
 
 # Depth First Search
 class DFS(PathFinder):
@@ -332,10 +331,10 @@ class DFS(PathFinder):
 
     def show(self, window):
         for c in self.__visited:
-            c.show(window, (0, 150, 30))
+            c.show(window, (0, 100, 30))
         for c in self.__stack:
-            c.show(window, (0, 200, 40))
+            c.show(window, (0, 150, 40))
         if self.__current_cell != None:
             path = self.__grid.get_path(self.__current_cell)
             for c in path:
-                c.show(window, (0, 250, 50))
+                c.show(window, (0, 200, 100))
