@@ -310,7 +310,7 @@ class DFS(PathFinder):
                 nbr.previous = self.__current_cell
 
             if self.__current_cell == self.__grid.end_cell:
-                logger.info("Found path with Dijkstra! length: %d", len(self.__grid.get_path(self.__current_cell)))
+                logger.info("Found path with Depth First Search! length: %d", len(self.__grid.get_path(self.__current_cell)))
                 self.solved = True
             
     def solve(self):
