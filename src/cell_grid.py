@@ -1,64 +1,72 @@
 
+from enum import Enum
+from pathlib import Path
+
 import logging
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
 import pygame
 
-from camera import *
+from camera import GridCamera
 
-WALL = 0
-FLOOR = 1
-START = 2
-END = 3
+MAP_DIRECTORY = Path(__file__).parent.parent / 'maps'
 
-cell_types = ["Wall", "Floor", "Start", "End"]
+class CellType(Enum):
+    WALL = 0
+    FLOOR = 1
+    START = 2
+    END = 3
+
+CELL_COLORS = {
+    CellType.WALL: (0, 0, 0),
+    CellType.FLOOR: (50, 180, 180),
+    CellType.START: (200, 40, 40),
+    CellType.END: (40, 250, 40)
+}
+
 
 class Cell:
-    def __init__(self, x, y, size, c_type=FLOOR):
+    def __init__(self, x, y, size, c_type=CellType.FLOOR):
         self.x = x
         self.y = y
         self.size = size
-        self.type = c_type
+        self.type: CellType = c_type
+
         self.f = 0
         self.h = 0
         self.g = 1000000.0
+
         self.previous = None
 
     # Draw cell
-    def show(self, window, c_color=None):
-        if c_color != None:
+    def show(self, surface, c_color=None):
+        if c_color:
             color = c_color
-        elif self.type == WALL:
-            color = (0, 0, 0)
-        elif self.type == FLOOR:
-            color = (50, 180, 180)
-        elif self.type == START:
-            color = (200, 40, 40)
-        elif self.type == END:
-            color = (40, 250, 40)
+        elif self.type in CELL_COLORS:
+            color = CELL_COLORS[self.type]
         
         #logger.info("Cell (%f, %f) size: %f", mx, my, msz)
-        pygame.draw.rect(window, color, pygame.Rect(self.x * self.size, self.y*self.size, self.size, self.size))
+        pygame.draw.rect(surface, color, pygame.Rect(self.x * self.size, self.y*self.size, self.size, self.size))
         #g_str = "{0:.3f}".format(self.g)
         #mfont = pygame.font.Font(pygame.font.get_default_font(), 8)
         #text_surface = mfont.render(g_str, True, (0, 0, 0))
         #window.blit(text_surface, dest=(self.x*self.size,self.y*self.size))
     
     def __repr__(self):
-        return "Cell (%d, %d), type: %s" % (self.x, self.y, cell_types[self.type])
+        return "Cell (%d, %d), type: %s" % (self.x, self.y, self.type)
 
 class CellGrid:
-    def __init__(self, window_size, c_size=10):
+    def __init__(self, size, c_size=12):
         self.cell_size = c_size
-        self.size = int(window_size / self.cell_size)
-        self.__cell_grid = [[Cell(x, y, self.cell_size, FLOOR) for x in range(0, self.size)] for y in range(0, self.size)]
-        self.start_cell = self.get_cell(1, 1)
-        self.start_cell.type = START
-        self.end_cell = self.get_cell(self.size-2, self.size-2)
-        self.end_cell.type = END
-        self.camera = GridCamera(0, 0, window_size)
-        self.surface = pygame.Surface((self.size, self.size))
+        self.size = size
+        self.__cell_grid = None
+        self.start_cell: Cell = None
+        self.end_cell: Cell = None
+        self.reset_cells()
+
+        self.camera = GridCamera(0, 0, self.size * self.cell_size)
+        #self.surface = pygame.Surface((self.size, self.size))
 
     def __iter__(self):
         for j in range(0, self.size):
@@ -71,26 +79,30 @@ class CellGrid:
         m_x, m_y = pygame.mouse.get_pos()
         c_x, c_y = self.cell_index(m_x, m_y)
         res = None
-        if self.camera.in_bounds(m_x, m_y):
-            #logger.info("m_xy (%d, %d) cxy (%d, %d)", m_x, m_y, c_x, c_y)
-            keys_pressed = pygame.key.get_pressed()
-            
-            if keys_pressed[pygame.K_s]:
-                self.set_cell_type(c_x, c_y, START)
-                logger.debug("Set START cell to (%d, %d)", c_x, c_y)
-                res = self.get_cell(c_x, c_y)
-            elif keys_pressed[pygame.K_e]:
-                self.set_cell_type(c_x, c_y, END)
-                logger.debug("Set END cell to (%d, %d)", c_x, c_y)
-                res = self.get_cell(c_x, c_y)
-            elif keys_pressed[pygame.K_w]:
-                self.set_cell_type(c_x, c_y, WALL)
-                logger.debug("Edit cell (%d, %d) type to WALL", c_x, c_y)
-                res = self.get_cell(c_x, c_y)
-            elif keys_pressed[pygame.K_f]:
-                self.set_cell_type(c_x, c_y, FLOOR)
-                logger.debug("Edit cell (%d, %d) type to WALL", c_x, c_y)
-                res = self.get_cell(c_x, c_y)
+        if not self.in_bounds(c_x, c_y, 1):
+            return res
+        #if not self.camera.in_bounds(m_x, m_y):
+        #    return res
+        
+        #logger.info("m_xy (%d, %d) cxy (%d, %d)", m_x, m_y, c_x, c_y)
+        keys_pressed = pygame.key.get_pressed()
+        
+        if keys_pressed[pygame.K_s]:
+            self.set_cell_type(c_x, c_y, CellType.START)
+            logger.debug("Set START cell to (%d, %d)", c_x, c_y)
+            res = self.get_cell(c_x, c_y)
+        elif keys_pressed[pygame.K_e]:
+            self.set_cell_type(c_x, c_y, CellType.END)
+            logger.debug("Set END cell to (%d, %d)", c_x, c_y)
+            res = self.get_cell(c_x, c_y)
+        elif keys_pressed[pygame.K_w]:
+            self.set_cell_type(c_x, c_y, CellType.WALL)
+            logger.debug("Edit cell (%d, %d) type to WALL", c_x, c_y)
+            res = self.get_cell(c_x, c_y)
+        elif keys_pressed[pygame.K_f]:
+            self.set_cell_type(c_x, c_y, CellType.FLOOR)
+            logger.debug("Edit cell (%d, %d) type to WALL", c_x, c_y)
+            res = self.get_cell(c_x, c_y)
         
         return res
 
@@ -121,20 +133,41 @@ class CellGrid:
                     self.camera.x, self.camera.y,
                     self.camera.current_scale,
                     zoom_in)
-    
-    
+
     # Draw CellGrid cells
-    def show(self, window):
+    def show(self, surface, solver_cells):
+        # Cull unvisible cells, ie. out of camera boundaries
+        #count = 0
         for cell in self:
-            cell.show(window)
+            #s = self.cell_size * self.camera.current_scale
+            #cx = cell.x * s
+            #cy = cell.y * s
+            #cams = self.camera.width
+            #if cx >= self.camera.x - s and cx < self.camera.x + cams \
+            #    and cy >= self.camera.y - s and cy < self.camera.y + cams:
+            cell.show(surface)
+                #count += 1
+        #logger.info("rendered %d cells", count)
+
+    def reset_cells(self):
+        self.__cell_grid = [[Cell(x, y, self.cell_size) for x in range(0, self.size)] for y in range(0, self.size)]
+        for x in range(0, self.size):
+            self.__cell_grid[0][x].type = CellType.WALL
+            self.__cell_grid[self.size-1][x].type = CellType.WALL
+            self.__cell_grid[x][0].type = CellType.WALL
+            self.__cell_grid[x][self.size-1].type = CellType.WALL
+
+        self.start_cell = self.get_cell(1, 1)
+        self.start_cell.type = CellType.START
+
+        self.end_cell = self.get_cell(self.size-2, self.size-2)
+        self.end_cell.type = CellType.END
 
     # Check if x and y are in bounds of CellGrid
-    # Optional in_off parameter for maze generation
+    # Optional in_off parameter for offset generation
     def in_bounds(self, x, y, in_off=0):
-        if x >= 0 + in_off and x < self.size - in_off and y >= 0 + in_off and y < self.size - in_off:
-            return True
-        else:
-            return False
+        return x >= 0 + in_off and x < self.size - in_off and y >= 0 + in_off and y < self.size - in_off
+
 
     # Returns grid indices from mouse position
     def cell_index(self, m_x, m_y):
@@ -144,7 +177,7 @@ class CellGrid:
         #logger.debug("Calling cell_index: mx, my (%f, %f) cx, cy (%d, %d)", m_x, m_y, c_x, c_y)
         return (c_x, c_y)
 
-        # Helper function to reconstruct path from current cell
+    # Helper function to reconstruct path from current cell
     def get_path(self, current_cell):
         res = []
         cur = current_cell
@@ -160,7 +193,7 @@ class CellGrid:
         for dir_x, dir_y in [(1,0), (0,1), (-1,0), (0,-1)]:
             n_x = cell_x + (dir_x * offset)
             n_y = cell_y + (dir_y * offset)
-            if(self.in_bounds(n_x, n_y)):
+            if(self.in_bounds(n_x, n_y, 1)):
                 res.append(self.get_cell(n_x, n_y))
         return res
 
@@ -185,16 +218,16 @@ class CellGrid:
 
     # Set cell type
     def set_cell_type(self, x, y, c_type):
-        if c_type == START:
+        if c_type == CellType.START:
             s_x, s_y = (self.start_cell.x, self.start_cell.y)
-            self.__cell_grid[s_y][s_x].type = FLOOR
+            self.__cell_grid[s_y][s_x].type = CellType.FLOOR
             self.start_cell = self.get_cell(x, y)
-            self.__cell_grid[y][x].type = START
-        elif c_type == END:
+            self.__cell_grid[y][x].type = CellType.START
+        elif c_type == CellType.END:
             e_x, e_y = (self.end_cell.x, self.end_cell.y)
-            self.__cell_grid[e_y][e_x].type = FLOOR
+            self.__cell_grid[e_y][e_x].type = CellType.FLOOR
             self.end_cell = self.get_cell(x, y)
-            self.__cell_grid[y][x].type = END
+            self.__cell_grid[y][x].type = CellType.END
         else:
             self.__cell_grid[y][x].type = c_type
     
@@ -208,4 +241,64 @@ class CellGrid:
             for c in c_row:
                 c.type = c_type
                     
-    
+    def find_free_cell(self, direction):
+        area = 3
+        x_start = 1 if direction == 1 else self.size - area
+        x_end = area if direction == 1 else self.size - 1
+        y_start = 1 if direction == 1 else self.size - area
+        y_end = area if direction == 1 else self.size - 1
+        res = None
+        print(x_start, x_end, y_start, y_end)
+        for y in range(y_start, y_end):
+            for x in range(x_start, x_end):
+                cell = self.get_cell(x, y)
+                if any([c for c in self.get_neighbors(x, y) if c.type == CellType.FLOOR]):
+                    res = cell
+                    break
+        return res
+
+# Save grid as text file
+def save_grid(file_name, grid: CellGrid):
+    try:
+        logger.info("Writing CellGrid to file %s", file_name)
+        file_path = MAP_DIRECTORY / file_name
+        if file_path.suffix != '.txt':
+            logger.warning('Incorrect file type: %s', file_path.suffix)
+            return
+        f = open(MAP_DIRECTORY / file_name, "w")
+        f.write("%d %d\n" % (grid.size, grid.cell_size))
+        grid_str = ""
+        for cell in grid:
+            grid_str += str(cell.type.value)
+        f.write(grid_str)
+    except IOError as e:
+        logger.error("Failed to open %s", file_name)
+        logger.exception(e)
+# Reads grid from text file
+
+def load_grid(file_name):
+    try:
+        f = open(MAP_DIRECTORY / file_name, "r")
+        logger.debug("Reading Cellgrid from file %s", file_name)
+        size_parts = f.readline().strip().split(' ')
+        g_size = int(size_parts[0])
+        c_size = int(size_parts[1])
+        logger.debug("Grid size: %d Cell size: %d", g_size, c_size)
+        m_grid = CellGrid(g_size, c_size)
+        x = 0
+        y = 0
+        for c in f.readline():
+            cell = Cell(x, y, c_size, CellType(int(c)))
+            m_grid.set_cell(x, y, cell)
+            if cell.type == CellType.START:
+                m_grid.start_cell = cell
+            elif cell.type == CellType.END:
+                m_grid.end_cell = cell
+            x += 1
+            if x == m_grid.size:
+                y += 1
+                x = 0
+        return m_grid
+    except IOError as e:
+        logger.error("Failed to load file %s", file_name)
+        logger.exception(e)
