@@ -1,8 +1,8 @@
 # pathfinder
-Path finding and maze generation visualization in Python using pygame and pygame_gui  
+Path finding and maze generation visualization in Python 3.9 using pygame and pygame_gui  
   
 run 'pip install -r requirements.txt'  
-run pathfinder.py  
+run main_app.py  
   
 Solving algorithms implemented so far:  
 Astar  
