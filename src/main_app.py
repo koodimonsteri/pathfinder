@@ -169,7 +169,7 @@ class MainApp():
                 self.solver.reset(self.cell_grid)
                 self.gui.update_infobox_path(0)
             
-            if not self.solver.solved:
+            if not self.solver.solved and not self.solver.no_path:
                 self.solver.solve_step()
 
         elif self.current_update_mode == 'Instant':
@@ -177,9 +177,9 @@ class MainApp():
             if ed_cell != None and self.solver.cell_in_use(ed_cell):
                 self.solver.reset(self.cell_grid)
                 self.gui.update_infobox_path(0)
-            
-            if not self.solver.solved:
+            if not self.solver.solved and not self.solver.no_path:
                 self.solver.solve_all()
+
         else:
             logger.info('Unrecognized mode: %s', self.current_update_mode)
 

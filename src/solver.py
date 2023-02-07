@@ -17,10 +17,12 @@ class Solver(ABC):
         self.name = name
         self._grid = grid
         self.solved = False
+        self.no_path = False
 
     def reset(self, grid: CellGrid):
         self._grid = grid
         self.solved = False
+        self.no_path = False
 
     def show(self, surface):
         raise NotImplementedError
@@ -29,9 +31,9 @@ class Solver(ABC):
         raise NotImplementedError
     
     def solve_all(self):
-        if self.solved:
+        if self.solved or self.no_path:
             return
-        while not self.solved:
+        while not self.solved and not self.no_path:
             self.solve_step()
 
     # Check if cell is being used by solver
@@ -76,12 +78,18 @@ class Astar(Solver):
         self.__openset = set()
         self.__closedset = set()
         self.__current_cell = None
+        #self.no_path = False
         #self.reset(self._grid)
 
     # Solve 1 step of astar
     def solve_step(self):
         #logger.info("Solving 1 step of astar")
-        if self.solved or len(self.__openset) == 0:
+        if self.solved or self.no_path:
+            return
+        
+        if len(self.__openset) == 0:
+            self.no_path = True
+            logger.info('No possible path!')
             return
 
         if self.__current_cell == self._grid.end_cell:
@@ -184,6 +192,7 @@ class Astar(Solver):
         self.__reset_heuristics()
         self.__current_cell.g = 0
         self.solved = False
+        self.no_path = False
 
     # Draw openset, closedset and path
     def show(self, surface):
@@ -212,11 +221,16 @@ class Dijkstra(Solver):
         self.__visited = set()
         self.__unvisited = []
         self.__current_cell = None
+        self.no_path = False
         self.reset(self._grid)
     
     def solve_step(self):
         #if len(self.__unvisited) > 0 and not self.solved:
-        if self.solved or len(self.__unvisited) == 0:
+        if self.solved or self.no_path:
+            return
+        if len(self.__unvisited) == 0:
+            self.no_path = True
+            logger.info('No possible path!')
             return
 
         if self.__current_cell == self._grid.end_cell:
@@ -314,6 +328,7 @@ class Dijkstra(Solver):
         self.__unvisited.append((self.__current_cell.g, self.__current_cell))
         self.__sort_unvisited()
         self.solved = False
+        self.no_path = False
         
     def show(self, surface):
         for c in self.__visited:
@@ -336,9 +351,10 @@ class DFS(Solver):
         self.__visited = set()
         self.__current_cell = None
         #self.reset(self._grid)
+        self.no_path = False
 
     def solve_step(self):
-        if len(self.__stack) == 0:
+        if len(self.__stack) == 0 or self.no_path:
             return
             
         c = self.__stack.pop()
@@ -355,7 +371,8 @@ class DFS(Solver):
             self.solved = True
         elif len(self.__stack) == 0:
             logger.info('No valid path!')
-            self.solved = True  # TODO Fix when no path
+            #self.solved = True  # TODO Fix when no path
+            self.no_path = True
 
     def cell_in_use(self, cell):
         return cell == self.__current_cell or cell in self.__visited or cell in self.__stack or cell == self._grid.start_cell or cell == self._grid.end_cell
@@ -372,6 +389,7 @@ class DFS(Solver):
         self.__current_cell: Cell = None
         self.__stack.append(self._grid.start_cell)
         self.solved = False
+        self._no_path = False
 
     def show(self, surface):
         for c in self.__visited:

@@ -96,10 +96,17 @@ class CellGrid:
             logger.debug("Set END cell to (%d, %d)", c_x, c_y)
             res = self.get_cell(c_x, c_y)
         elif keys_pressed[pygame.K_w]:
-            self.set_cell_type(c_x, c_y, CellType.WALL)
-            logger.debug("Edit cell (%d, %d) type to WALL", c_x, c_y)
+            if self.set_cell_type(c_x, c_y, CellType.WALL):
+                logger.debug('Dont overwrite start or end!')
+            else:
+                logger.debug("Edit cell (%d, %d) type to WALL", c_x, c_y)
             res = self.get_cell(c_x, c_y)
         elif keys_pressed[pygame.K_f]:
+            if self.set_cell_type(c_x, c_y, CellType.FLOOR):
+                logger.debug('Dont overwrite start or end!')
+            else:
+                logger.debug("Edit cell (%d, %d) type to FLOOR", c_x, c_y)
+            res = self.get_cell(c_x, c_y)
             self.set_cell_type(c_x, c_y, CellType.FLOOR)
             logger.debug("Edit cell (%d, %d) type to WALL", c_x, c_y)
             res = self.get_cell(c_x, c_y)
@@ -218,19 +225,26 @@ class CellGrid:
 
     # Set cell type
     def set_cell_type(self, x, y, c_type):
+        res = None
         if c_type == CellType.START:
             s_x, s_y = (self.start_cell.x, self.start_cell.y)
             self.__cell_grid[s_y][s_x].type = CellType.FLOOR
             self.start_cell = self.get_cell(x, y)
             self.__cell_grid[y][x].type = CellType.START
+            res = self.__cell_grid[y][x]
         elif c_type == CellType.END:
             e_x, e_y = (self.end_cell.x, self.end_cell.y)
             self.__cell_grid[e_y][e_x].type = CellType.FLOOR
             self.end_cell = self.get_cell(x, y)
             self.__cell_grid[y][x].type = CellType.END
+            res = self.__cell_grid[y][x]
         else:
-            self.__cell_grid[y][x].type = c_type
-    
+            cur_cell = self.get_cell(x, y)
+            if cur_cell.type != CellType.START and cur_cell.type != CellType.END:
+                cur_cell.type = c_type
+                res = cur_cell
+        return res
+
     # Get cell type
     def get_cell_type(self, x, y):
         return self.__cell_grid[y][x].type
